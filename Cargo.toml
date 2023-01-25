@@ -1,0 +1,30 @@
+[package]
+name = "tripolys"
+version = "1.0.0"
+authors = ["Michael Wernthaler <michael.wernthaler@posteo.de>"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bimap = "0.6.2"
+bitvec = "1.0.1"
+clap = "2.33.0"
+colored = "2.0.0"
+csv = "1.1.6"
+indexmap = "1.9.2"
+itertools = "0.10.1"
+petgraph = "0.6.2"
+rayon = "1.5"
+serde = { version = "1.0", features = ["derive", "rc"]}
+thiserror = "1.0.31"
+
+[lib]
+name = "tripolys"
+path = "src/tripolys/lib.rs"
+
+[[bin]]
+name = "tripolys"
+path = "src/bin/tripolys/main.rs"
+test = false
+doc = false
