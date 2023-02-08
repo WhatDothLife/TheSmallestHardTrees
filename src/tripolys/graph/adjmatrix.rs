@@ -1,14 +1,17 @@
-use std::{cmp, ops::Range};
+use std::cmp;
 
 use bitvec::bitvec;
 use bitvec::vec::BitVec;
 
-use super::traits::{Edges, Vertices};
+use super::traits::{Base, HasEdge};
 
+/// AdjMatrix is a graph datastructure using a matrix representation.
+///
+/// It is used in the backtracking algorithm, because of frequent edge-lookup
+/// which it implements in O(1).
 #[derive(Clone, Debug)]
 pub struct AdjMatrix {
     adjacencies: BitVec,
-    edges: Vec<(usize, usize)>,
     num_vertices: usize,
 }
 
@@ -16,7 +19,6 @@ impl AdjMatrix {
     pub fn new() -> AdjMatrix {
         AdjMatrix {
             adjacencies: BitVec::new(),
-            edges: Vec::new(),
             num_vertices: 0,
         }
     }
@@ -27,51 +29,29 @@ impl AdjMatrix {
     {
         let edges = Vec::from_iter(edges);
 
-        let mut max = 0;
+        let mut num_vertices = 0;
         for &(u, v) in &edges {
-            max = cmp::max(max, cmp::max(u, v));
+            num_vertices = cmp::max(num_vertices, cmp::max(u, v) + 1);
         }
 
-        let mut adjacencies = bitvec![0; max * max];
+        let mut adjacencies = bitvec![0; num_vertices * num_vertices];
+
         for &(u, v) in &edges {
-            adjacencies.set(u * max + v, true);
+            adjacencies.set(u * num_vertices + v, true);
         }
 
         AdjMatrix {
-            adjacencies: BitVec::new(),
-            edges,
-            num_vertices: max,
+            adjacencies,
+            num_vertices,
         }
     }
 }
 
-impl Vertices for AdjMatrix {
-    type VertexIter = Range<usize>;
-
-    fn vertex_count(&self) -> usize {
-        self.num_vertices
-    }
-
-    fn vertices(&self) -> Self::VertexIter {
-        0..self.num_vertices
-    }
-
-    fn has_vertex(&self, v: usize) -> bool {
-        v < self.num_vertices
-    }
+impl Base for AdjMatrix {
+    type Vertex = usize;
 }
 
-impl Edges for AdjMatrix {
-    type EdgeIter = std::vec::IntoIter<(usize, usize)>;
-
-    fn edges(&self) -> Self::EdgeIter {
-        self.edges.clone().into_iter()
-    }
-
-    fn edge_count(&self) -> usize {
-        self.edges.len()
-    }
-
+impl HasEdge for AdjMatrix {
     fn has_edge(&self, u: usize, v: usize) -> bool {
         if u >= self.num_vertices || v >= self.num_vertices {
             panic!("Vertices out of bounds");
@@ -84,5 +64,41 @@ impl Edges for AdjMatrix {
 impl FromIterator<(usize, usize)> for AdjMatrix {
     fn from_iter<T: IntoIterator<Item = (usize, usize)>>(iter: T) -> Self {
         Self::from_edges(iter)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AdjMatrix;
+    use crate::graph::traits::HasEdge;
+
+    #[test]
+    fn test_new_adj_matrix() {
+        let adj_matrix = AdjMatrix::new();
+
+        assert_eq!(adj_matrix.num_vertices, 0);
+        assert_eq!(adj_matrix.adjacencies.len(), 0);
+    }
+
+    #[test]
+    fn test_from_edges_adj_matrix() {
+        let edges = vec![(0, 1), (1, 2), (2, 3)];
+        let adj_matrix = AdjMatrix::from_edges(edges);
+
+        assert_eq!(adj_matrix.num_vertices, 4);
+        assert_eq!(adj_matrix.adjacencies.len(), 16);
+        assert_eq!(adj_matrix.has_edge(0, 1), true);
+        assert_eq!(adj_matrix.has_edge(1, 2), true);
+        assert_eq!(adj_matrix.has_edge(2, 3), true);
+        assert_eq!(adj_matrix.has_edge(3, 0), false);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_has_edge_out_of_bounds() {
+        let edges = vec![(0, 1), (1, 2), (2, 3)];
+        let adj_matrix = AdjMatrix::from_edges(edges);
+
+        adj_matrix.has_edge(4, 5);
     }
 }

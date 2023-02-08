@@ -1,24 +1,25 @@
-use indexmap::IndexSet;
 use itertools::Itertools;
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::hash::Hash;
 use std::str::FromStr;
 
 use crate::graph::classes::directed_path;
-use crate::graph::traits::Digraph;
-use crate::graph::AdjMap;
-use crate::solve::Problem;
+use crate::graph::traits::{Contract, Digraph, Edges, Vertices};
+use crate::graph::AdjList;
+use crate::csp::Problem;
 
 pub fn levels<G>(g: G) -> Option<Vec<usize>>
 where
     G: Digraph,
+    G::Vertex: Debug,
 {
     for k in 0..g.vertex_count() {
-        let h: Vec<_> = directed_path::<Vec<_>>(k + 1);
+        let h: AdjList<_> = directed_path(k + 1);
         let mut problem = Problem::new(&g, h);
 
         if let Some(sol) = problem.solve_first() {
-            return Some(sol.into_iter().map(|v| v).collect());
+            return Some(sol.into_iter().collect());
         }
     }
     None
@@ -30,13 +31,13 @@ impl<V: Clone, I> IterAlgebra<V> for I where I: Iterator<Item = (V, V)> {}
 
 #[doc(hidden)]
 pub trait IterAlgebra<V: Clone>: Iterator<Item = (V, V)> {
-    fn power(self, n: usize) -> Power<V>
+    fn kproduct(self, k: usize) -> KProduct<V>
     where
         Self: Sized + Clone,
     {
         let mut edges = vec![(vec![], vec![])];
 
-        for _ in 0..n {
+        for _ in 0..k {
             let mut t_edges = Vec::<(Vec<V>, Vec<V>)>::new();
             for (u, v) in edges {
                 for (e0, e1) in self.clone() {
@@ -49,20 +50,127 @@ pub trait IterAlgebra<V: Clone>: Iterator<Item = (V, V)> {
             }
             edges = t_edges;
         }
-        Power(edges.into_iter())
+        KProduct(edges.into_iter())
     }
 }
 
 #[doc(hidden)]
 #[derive(Clone, Debug)]
-pub struct Power<V>(std::vec::IntoIter<(Vec<V>, Vec<V>)>);
+pub struct KProduct<V>(std::vec::IntoIter<(Vec<V>, Vec<V>)>);
 
-impl<V> Iterator for Power<V> {
+impl<V> Iterator for KProduct<V> {
     type Item = (Vec<V>, Vec<V>);
 
     fn next(&mut self) -> Option<Self::Item> {
         self.0.next()
     }
+}
+
+/// The problem of deciding whether a graph has a given type of polymorphism(s).
+#[derive(Clone, Copy, Debug)]
+pub struct MetaProblem {
+    condition: Condition,
+    level_wise: bool,
+    conservative: bool,
+    idempotent: bool,
+}
+
+impl MetaProblem {
+    pub fn new(condition: Condition) -> MetaProblem {
+        MetaProblem {
+            level_wise: true,
+            conservative: false,
+            idempotent: false,
+            condition,
+        }
+    }
+
+    pub fn level_wise(mut self, flag: bool) -> Self {
+        self.level_wise = flag;
+        self
+    }
+
+    pub fn conservative(mut self, flag: bool) -> Self {
+        self.conservative = flag;
+        self
+    }
+
+    pub fn idempotent(mut self, flag: bool) -> Self {
+        self.idempotent = flag;
+        self
+    }
+
+    pub fn problem(
+        &self,
+        template: &AdjList<usize>,
+    ) -> Result<Problem<(usize, Vec<usize>), usize>, Error> {
+        let indicator = indicator_graph(template, self.condition, self.level_wise)?;
+
+        let mut problem = Problem::new(&indicator, template);
+
+        for v_ind in indicator.vertices() {
+            if let Some(u) = precolor(self.condition, &v_ind) {
+                problem.set_value(v_ind, u);
+            } else if self.conservative {
+                problem.set_domain(v_ind.clone(), v_ind.1.clone());
+            } else if self.idempotent {
+                if v_ind.1.iter().all_equal() {
+                    problem.set_value(v_ind.clone(), v_ind.1[0]);
+                } else {
+                    problem.set_domain(v_ind, template.vertices());
+                }
+            } else {
+                problem.set_domain(v_ind, template.vertices());
+            }
+        }
+
+        Ok(problem)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Error {
+    Unbalanced,
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Error::Unbalanced => write!(f, "The given graph is not balanced"),
+        }
+    }
+}
+
+impl std::error::Error for Error {}
+
+pub fn indicator_graph(
+    template: &AdjList<usize>,
+    condition: Condition,
+    level_wise: bool,
+) -> Result<AdjList<(usize, Vec<usize>)>, Error> {
+    let levels = if level_wise {
+        levels(template).ok_or(Error::Unbalanced)?
+    } else {
+        vec![]
+    };
+
+    let mut indicator: AdjList<_> = arities(condition)
+        .into_iter()
+        .enumerate()
+        .flat_map(|(i, k)| {
+            template
+                .edges()
+                .kproduct(k)
+                .map(move |(u, v)| ((i, u), (i, v)))
+        })
+        .filter(|((_, u), _)| !level_wise || u.iter().map(|v| levels[*v]).all_equal())
+        .collect();
+
+    for class in eq_classes(condition, &template.vertices().collect_vec()) {
+        indicator.contract_vertices(class);
+    }
+
+    Ok(indicator)
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -153,115 +261,6 @@ impl std::fmt::Display for ParseConditionError {
 }
 
 impl std::error::Error for ParseConditionError {}
-
-/// The problem of deciding whether a graph has a given type of polymorphism(s).
-#[derive(Clone, Copy, Debug)]
-pub struct Polymorphism {
-    condition: Condition,
-    level_wise: bool,
-    conservative: bool,
-    idempotent: bool,
-}
-
-impl Polymorphism {
-    pub fn new(condition: Condition) -> Polymorphism {
-        Polymorphism {
-            level_wise: true,
-            conservative: false,
-            idempotent: false,
-            condition,
-        }
-    }
-
-    pub fn level_wise(mut self, flag: bool) -> Self {
-        self.level_wise = flag;
-        self
-    }
-
-    pub fn conservative(mut self, flag: bool) -> Self {
-        self.conservative = flag;
-        self
-    }
-
-    pub fn idempotent(mut self, flag: bool) -> Self {
-        self.idempotent = flag;
-        self
-    }
-
-    pub fn problem<H>(&self, h: H) -> Result<Problem, Error>
-    where
-        H: Digraph,
-        H::EdgeIter: Clone,
-    {
-        let levels = if self.level_wise {
-            levels(&h).ok_or(Error::Unbalanced)?
-        } else {
-            vec![]
-        };
-        // Indicator graph construction
-        let mut ind_graph: AdjMap<_> = arities(self.condition)
-            .into_iter()
-            .enumerate()
-            .flat_map(|(i, k)| h.edges().power(k).map(move |(u, v)| ((i, u), (i, v))))
-            .filter(|((_, u), _)| !self.level_wise || u.iter().map(|v| levels[*v]).all_equal())
-            .collect();
-
-        for class in eq_classes(self.condition, &h.vertices().collect_vec()) {
-            for i in 1..class.len() {
-                ind_graph.contract_vertices(&class[0], &class[i]);
-            }
-        }
-
-        let id_map: IndexSet<_> = ind_graph.vertices().collect();
-
-        let ind_edges: Vec<_> = ind_graph
-            .edges()
-            .map(|(u, v)| {
-                (
-                    id_map.get_index_of(&u).unwrap(),
-                    id_map.get_index_of(&v).unwrap(),
-                )
-            })
-            .collect();
-
-        let mut problem = Problem::new(ind_edges, &h);
-
-        for v in 0..id_map.len() {
-            let v_ind = id_map.get_index(v).unwrap();
-
-            if let Some(u) = precolor(self.condition, v_ind) {
-                problem.set_value(v, u);
-            } else if self.conservative {
-                problem.set_domain(v, v_ind.1.clone());
-            } else if self.idempotent {
-                if v_ind.1.iter().all_equal() {
-                    problem.set_value(v, v_ind.1[0]);
-                } else {
-                    problem.set_domain(v, h.vertices());
-                }
-            } else {
-                problem.set_domain(v, h.vertices());
-            }
-        }
-
-        Ok(problem)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Error {
-    Unbalanced,
-}
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            Error::Unbalanced => write!(f, "The given graph is not balanced"),
-        }
-    }
-}
-
-impl std::error::Error for Error {}
 
 fn arities(condition: Condition) -> Vec<usize> {
     match condition {

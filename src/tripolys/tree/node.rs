@@ -1,13 +1,12 @@
-use std::{cmp::max, ops::Range};
 use std::str::FromStr;
 use std::sync::Arc;
+use std::{cmp::max, ops::Range};
 
 use itertools::Itertools;
-// use num_iter::{range, Range};
 
-use crate::graph::traits::{Digraph, Edges, Vertices};
+use crate::graph::traits::{Base, Edges, Vertices};
 
-/// A recursive tree data-structure
+/// A recursive tree data-structure.
 #[derive(Clone, Debug, PartialOrd, PartialEq)]
 pub struct Node {
     pub(crate) num_nodes: usize,
@@ -91,24 +90,31 @@ impl Node {
         root_found
     }
 
+    pub fn push_child(&mut self, child: Arc<Node>, dir: bool) {
+        self.num_nodes += child.num_nodes;
+        self.height = max(self.height, child.height + 1);
+        self.max_arity = max(self.max_arity, child.children.len() + 1);
+        self.children.push((child, dir));
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = (Arc<Node>, bool)> + '_ {
         self.children.iter().cloned()
     }
 }
 
-impl Vertices for Node {
-    type VertexIter = Range<usize>;
+impl Base for Node {
+    type Vertex = usize;
+}
 
-    fn vertices(&self) -> Self::VertexIter {
+impl Vertices for Node {
+    type VertexIter<'a> = Range<usize>;
+
+    fn vertices(&self) -> Self::VertexIter<'_> {
         0..self.vertex_count()
     }
 
     fn vertex_count(&self) -> usize {
         self.num_nodes
-    }
-
-    fn has_vertex(&self, v: usize) -> bool {
-        v < self.num_nodes
     }
 }
 
@@ -146,40 +152,24 @@ impl Iterator for EdgeIter {
 }
 
 impl Edges for Node {
-    type EdgeIter = EdgeIter;
+    type EdgeIter<'a> = EdgeIter;
 
-    fn edges(&self) -> Self::EdgeIter {
+    fn edges(&self) -> Self::EdgeIter<'_> {
         EdgeIter(edges(self).into_iter())
     }
 
     fn edge_count(&self) -> usize {
         self.vertex_count() - 1
     }
-
-    fn has_edge(&self, _u: usize, _v: usize) -> bool {
-        todo!()
-    }
 }
 
 impl FromIterator<(Arc<Node>, bool)> for Node {
     fn from_iter<T: IntoIterator<Item = (Arc<Node>, bool)>>(iter: T) -> Node {
-        let children = Vec::from_iter(iter);
-        let mut num_nodes = 1;
-        let mut height = 0;
-        let mut max_arity = 0;
-
-        for (child, _) in &children {
-            num_nodes += child.num_nodes;
-            height = max(height, child.height);
-            max_arity = max(max_arity, child.children.len() + 1);
+        let mut node = Node::leaf();
+        for (child, dir) in iter {
+            node.push_child(child, dir);
         }
-
-        Node {
-            num_nodes,
-            height: height + 1,
-            max_arity: max(max_arity, children.len()),
-            children,
-        }
+        node
     }
 }
 
@@ -253,7 +243,7 @@ pub enum ParseTreeNodeError {
 impl std::fmt::Display for ParseTreeNodeError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            ParseTreeNodeError::InvalidCharacter(c) => write!(f, "Could not parse: {}", c),
+            ParseTreeNodeError::InvalidCharacter(c) => write!(f, "Could not parse: {c}"),
         }
     }
 }
@@ -272,12 +262,12 @@ impl std::fmt::Display for Node {
 
         for (child, dir) in &self.children {
             let d = if *dir { '1' } else { '0' };
-            s.push_str(&format!("{}{}", d, child));
+            s.push_str(&format!("{d}{child}"));
         }
         if self.arity() != 0 {
             s = "[".to_string() + s.as_str() + "]";
         }
 
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }

@@ -1,5 +1,6 @@
-use std::io::{Read, Write};
-use std::{io, num};
+//! Reading and writing of graph formats.
+
+use std::{fmt, io, num};
 
 use itertools::Itertools;
 use thiserror::Error;
@@ -7,17 +8,18 @@ use thiserror::Error;
 use super::traits::{Digraph, Edges};
 
 /// Prints the graph in dot format.
-pub fn to_dot<G, W>(g: &G, output: &mut W) -> Result<(), io::Error>
+pub fn to_dot<G, W>(g: G, output: &mut W) -> Result<(), io::Error>
 where
     G: Digraph,
-    W: Write,
+    W: io::Write,
+    G::Vertex: fmt::Display,
 {
     let mut s = String::from("digraph {\n");
     for v in g.vertices() {
-        s.push_str(&format!("\"{}\";\n", v));
+        s.push_str(&format!("\"{v}\";\n"));
     }
     for (u, v) in g.edges() {
-        s.push_str(&format!("\"{}\" -> \"{}\";\n", u, v));
+        s.push_str(&format!("\"{u}\" -> \"{v}\";\n"));
     }
     s.push('}');
     output.write_all(s.as_bytes())?;
@@ -26,14 +28,15 @@ where
 }
 
 /// Prints the graph in dot format.
-pub fn to_edge_list<G, W>(g: &G, output: &mut W) -> Result<(), io::Error>
+pub fn to_edge_list<G, W>(g: G, output: &mut W) -> Result<(), io::Error>
 where
     G: Digraph,
-    W: Write,
+    W: io::Write,
+    G::Vertex: fmt::Display,
 {
     let mut s = String::from("[");
     for (u, v) in g.edges() {
-        s.push_str(&format!("({},{})", u, v));
+        s.push_str(&format!("({u},{v})"));
     }
     s.push(']');
     output.write_all(s.as_bytes())?;
@@ -42,14 +45,15 @@ where
 }
 
 /// Prints the graph in csv format.
-pub fn to_csv<G, W>(g: &G, output: &mut W) -> Result<(), io::Error>
+pub fn to_csv<G, W>(g: G, output: &mut W) -> Result<(), io::Error>
 where
     G: Edges,
-    W: std::io::Write,
+    W: io::Write,
+    G::Vertex: fmt::Display,
 {
     let bytes = g
         .edges()
-        .flat_map(|(u, v)| format!("{};{}\n", u, v).into_bytes())
+        .flat_map(|(u, v)| format!("{u};{v}\n").into_bytes())
         .collect_vec();
     output.write_all(&bytes)?;
 
@@ -60,7 +64,7 @@ where
 pub fn from_csv<G, R>(mut read: R) -> Result<G, CsvError>
 where
     G: FromIterator<(usize, usize)>,
-    R: Read,
+    R: io::Read,
 {
     let mut content = String::new();
     read.read_to_string(&mut content)?;
@@ -106,9 +110,6 @@ where
     }
 
     let mut edges = Vec::new();
-    // let nvertices = s.len() - 1;
-    // let mut g = G::with_capacities(nvertices, nvertices - 1);
-    // let vertices: Vec<_> = (0..nvertices).map(|_| g.add_vertex()).collect();
     let mut j = 1;
 
     for arm in s.split(',') {
@@ -149,7 +150,7 @@ impl std::fmt::Display for ParseTriadError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             ParseTriadError::NumArms => write!(f, "A triad must have exactly 3 arms!"),
-            ParseTriadError::InvalidCharacter(c) => write!(f, "Could not parse: {}", c),
+            ParseTriadError::InvalidCharacter(c) => write!(f, "Could not parse: {c}"),
         }
     }
 }

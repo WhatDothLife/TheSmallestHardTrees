@@ -28,3 +28,6 @@ name = "tripolys"
 path = "src/bin/tripolys/main.rs"
 test = false
 doc = false
+
+[profile.release]
+debug = true

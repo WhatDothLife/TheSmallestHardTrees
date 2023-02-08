@@ -1,3 +1,5 @@
+//! Provides functions to construct common types of directed graphs.
+
 /// Returns a directed path with `m` edges.
 pub fn directed_path<G>(m: usize) -> G
 where

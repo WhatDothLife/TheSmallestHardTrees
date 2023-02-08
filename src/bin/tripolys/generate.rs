@@ -1,11 +1,11 @@
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 use tripolys::graph::formats::to_edge_list;
-use tripolys::tree::generate::{TreeGenConfig, TreeGenStats, TreeGenerator};
+use tripolys::tree::generate::{generate_trees, TreeGenConfig, TreeGenStats};
 
+use std::fs::{create_dir_all, File};
 use std::io::{BufWriter, Write};
 use std::path::PathBuf;
-
-// use tripolys::tree::generate::{TreeGenSettings, TreeGenStats, TreeGenerator};
+use std::time::Instant;
 
 use crate::CmdResult;
 
@@ -18,12 +18,6 @@ pub fn cli() -> App<'static, 'static> {
                 .short("core")
                 .long("core")
                 .help("Whether the generated graphs should be cores"),
-        )
-        .arg(
-            Arg::with_name("triad")
-                .short("t")
-                .long("triad")
-                .help("Generate triads"),
         )
         .arg(
             Arg::with_name("start")
@@ -50,65 +44,56 @@ pub fn cli() -> App<'static, 'static> {
                 .default_value("./data")
                 .help("Path of the data directory"),
         )
-        .arg(
-            Arg::with_name("max_arity")
-                .short("m")
-                .long("max_arity")
-                .takes_value(true)
-                .value_name("NUM")
-                .conflicts_with("triads")
-                .help("The maximal arity of the trees"),
-        )
 }
 
 pub fn command(args: &ArgMatches) -> CmdResult {
     let data_path = args.value_of("data_path").unwrap();
+    let path = PathBuf::from(data_path);
+
+    if !path.is_dir() {
+        return Err(format!("Directory {path:?} doesn't exist").into());
+    }
 
     let start = args.value_of("start").unwrap().parse::<usize>()?;
     let end = args.value_of("end").unwrap().parse::<usize>()?;
-    // let triad = args.is_present("triad");
     let core = args.is_present("core");
-    // let max_arity = if let Some(a) = args.value_of("max_arity") {
-    //     a.parse::<usize>()?
-    // } else {
-    //     end
-    // };
 
     let config = TreeGenConfig {
-        // max_arity,
         core,
-        // triad,
         start,
         end,
         stats: Some(TreeGenStats::default()),
     };
 
-    let mut generator = TreeGenerator::new(config);
+    let mut rooted_trees = vec![];
 
-    for num_vertices in start..=end {
-        println!("\n> #vertices: {}", num_vertices);
+    for n in start..=end {
+        println!("\n> #vertices: {n}");
         println!("  > Generating trees...");
-        let now = std::time::Instant::now();
-        let trees = generator.generate();
-        println!("    - total_time: {:?}", now.elapsed());
-        let dir_name = if num_vertices < 10 {
-            String::from("0") + &num_vertices.to_string()
+
+        let tstart = Instant::now();
+        let trees = generate_trees(n, &mut rooted_trees, &config);
+        let tend = tstart.elapsed();
+        println!("    - total_time: {tend:?}");
+
+        let dir_name = if n < 10 {
+            String::from("0") + &n.to_string()
         } else {
-            num_vertices.to_string()
+            n.to_string()
         };
-        println!("#trees: {}", trees.len());
-        let mut path = PathBuf::from(data_path).join(dir_name);
-        if triad {
-            path.push("triads");
-        }
-        std::fs::create_dir_all(&path)?;
-        let file_name = if core { "cores.csv" } else { "trees.csv" };
-        let mut writer = BufWriter::new(std::fs::File::create(path.join(file_name))?);
-        writer.write_all("tree\n".as_bytes())?;
+
+        let dir = path.join(dir_name);
+        // if triad {
+        //     path.push("triads");
+        // }
+        create_dir_all(&dir)?;
+        let file_name = if core { "cores" } else { "trees" };
+        let file = File::create(dir.join(file_name))?;
+        let mut writer = BufWriter::new(file);
 
         for tree in trees {
             to_edge_list(&tree, &mut writer)?;
-            writer.write_all("\n".as_bytes())?;
+            writer.write_all(b"\n")?;
         }
     }
 

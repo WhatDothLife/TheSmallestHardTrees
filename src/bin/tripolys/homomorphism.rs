@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Debug, num::ParseIntError};
 
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 use colored::Colorize;
-use tripolys::solve::Problem;
+use tripolys::{csp::Problem, graph::AdjList};
 
 use crate::{parse_graph, print_stats, CmdResult};
 
@@ -49,8 +49,8 @@ pub fn cli() -> App<'static, 'static> {
 }
 
 pub fn command(args: &ArgMatches) -> CmdResult {
-    let g: Vec<_> = parse_graph(args.value_of("from").unwrap())?;
-    let h: Vec<_> = parse_graph(args.value_of("to").unwrap())?;
+    let g: AdjList<usize> = parse_graph(args.value_of("from").unwrap())?;
+    let h: AdjList<usize> = parse_graph(args.value_of("to").unwrap())?;
 
     let mut problem = Problem::new(g, h);
 
@@ -80,7 +80,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
         println!("{}", "  ! Doesn't exist\n".to_string().red());
     };
 
-    print_stats(problem.stats());
+    print_stats(problem.stats().unwrap());
 
     Ok(())
 }

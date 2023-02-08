@@ -4,19 +4,17 @@ use csv::WriterBuilder;
 use rayon::prelude::*;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
+use tripolys::csp::SolveStats;
 use tripolys::graph::formats::from_edge_list;
-use tripolys::graph::AdjMatrix;
-use tripolys::solve::solver::SolveStats;
+use tripolys::graph::AdjList;
 
 use std::path::Path;
 use std::str::FromStr;
 use std::time::Duration;
 
-use tripolys::algebra::{Condition, Polymorphism};
+use tripolys::algebra::{Condition, MetaProblem};
 
 use crate::{parse_graph, print_stats, CmdResult};
-
-// use crate::{parse_graph, print_stats, CmdResult};
 
 const AVAILABLE_CONDITIONS: [&str; 9] = [
     "majority    majority",
@@ -123,7 +121,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
     let idempotent = args.is_present("idempotent");
     let level_wise = args.is_present("level-wise");
 
-    let polymorphism = Polymorphism::new(condition)
+    let polymorphism = MetaProblem::new(condition)
         .conservative(conservative)
         .idempotent(idempotent)
         .level_wise(level_wise);
@@ -135,7 +133,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
     });
 
     if let Some(graph) = args.value_of("graph") {
-        let h: AdjMatrix = parse_graph(graph)?;
+        let h: AdjList<usize> = parse_graph(graph)?;
         let mut problem = polymorphism.problem(&h)?;
 
         println!("\n> Checking for polymorphisms...");
@@ -146,33 +144,39 @@ pub fn command(args: &ArgMatches) -> CmdResult {
             println!("{}", "  ! Doesn't exist\n".to_string().red());
         };
 
-        print_stats(problem.stats());
+        print_stats(problem.stats().unwrap());
 
         return Ok(());
     }
 
     let input_path = args.value_of("input").unwrap();
     let output_path = args.value_of("output").unwrap();
-    let mut graphs: Vec<Vec<(usize, usize)>> = Vec::new();
     let content = std::fs::read_to_string(input_path)?;
+    let mut lines = content.lines();
 
-    for line in content.lines() {
-        graphs.push(from_edge_list(line));
+    if input_path.ends_with("csv") {
+        lines.next();
     }
+    let graphs: Vec<_> = lines
+        .map(|line| from_edge_list::<AdjList<usize>>(line))
+        .collect();
 
     let log = std::sync::Mutex::new(SearchLog::new());
     println!("  > Checking for polymorphisms...",);
-    let start = std::time::Instant::now();
+    let tstart = std::time::Instant::now();
 
     graphs.into_par_iter().for_each(|h| {
         let mut problem = polymorphism.problem(&h).unwrap();
         let found = problem.solution_exists();
 
         if filter.map_or(true, |v| !(v ^ found)) {
-            log.lock().unwrap().add(line, found, problem.stats());
+            log.lock()
+                .unwrap()
+                .add(h.to_string(), found, problem.stats().unwrap());
         }
     });
-    println!("    - total_time: {:?}", start.elapsed());
+    let tend = tstart.elapsed();
+    println!("    - total_time: {tend:?}");
     println!("  > Writing results...",);
     log.lock().unwrap().write_csv(&output_path)?;
 
@@ -221,7 +225,7 @@ impl SearchLog {
         SearchLog::default()
     }
 
-    pub fn add(&mut self, graph: String, found: bool, stats: &SolveStats) {
+    pub fn add(&mut self, graph: String, found: bool, stats: SolveStats) {
         let record = Record {
             graph,
             found,
@@ -234,7 +238,10 @@ impl SearchLog {
     }
 
     pub fn write_csv<P: AsRef<Path>>(&self, path: P) -> Result<(), std::io::Error> {
-        let mut wtr = WriterBuilder::new().has_headers(true).from_path(&path)?;
+        let mut wtr = WriterBuilder::new()
+            .has_headers(true)
+            .delimiter(b';')
+            .from_path(&path)?;
         for record in &self.0 {
             wtr.serialize(record)?;
         }

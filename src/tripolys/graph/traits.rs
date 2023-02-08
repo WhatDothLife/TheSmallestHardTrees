@@ -1,88 +1,109 @@
-pub type Vertex = usize;
-pub type Edge = (Vertex, Vertex);
+//! Traits for graph data structures.
 
-pub trait Vertices {
-    type VertexIter: Iterator<Item = Vertex>;
+use std::hash::Hash;
 
-    fn vertex_count(&self) -> usize;
-
-    fn vertices(&self) -> Self::VertexIter;
-
-    fn has_vertex(&self, v: Vertex) -> bool;
+pub trait Base {
+    type Vertex: Hash + Clone + Eq;
 }
 
-pub trait Edges {
-    type EdgeIter: Iterator<Item = Edge>;
+pub trait Build: Base {
+    fn add_vertex(&mut self, v: Self::Vertex);
 
-    fn edges(&self) -> Self::EdgeIter;
+    fn add_edge(&mut self, u: Self::Vertex, v: Self::Vertex);
+}
+
+pub trait Vertices: Base {
+    type VertexIter<'a>: Iterator<Item = Self::Vertex>
+    where
+        Self: 'a;
+
+    fn vertices(&self) -> Self::VertexIter<'_>;
+
+    fn vertex_count(&self) -> usize;
+}
+
+pub trait HasVertex: Base {
+    fn has_vertex(&self, v: Self::Vertex) -> bool;
+}
+
+pub trait Edges: Base {
+    type EdgeIter<'a>: Iterator<Item = (Self::Vertex, Self::Vertex)>
+    where
+        Self: 'a;
+
+    fn edges(&self) -> Self::EdgeIter<'_>;
 
     fn edge_count(&self) -> usize;
+}
 
-    fn has_edge(&self, u: usize, v: usize) -> bool;
+pub trait HasEdge: Base {
+    fn has_edge(&self, u: Self::Vertex, v: Self::Vertex) -> bool;
+}
+
+pub trait Contract: Base {
+    fn contract_vertex(&mut self, u: Self::Vertex, v: Self::Vertex) -> bool;
+
+    fn contract_vertices<I>(&mut self, vertices: I)
+    where
+        I: IntoIterator<Item = Self::Vertex>,
+    {
+        let mut iter = vertices.into_iter();
+
+        if let Some(u) = iter.next() {
+            for v in iter {
+                self.contract_vertex(u.clone(), v);
+            }
+        }
+    }
 }
 
 pub trait Digraph: Vertices + Edges {}
 
 impl<G> Digraph for G where G: Vertices + Edges {}
 
-impl<G: Edges> Edges for &G {
-    type EdgeIter = G::EdgeIter;
-
-    fn edges(&self) -> Self::EdgeIter {
-        (*self).edges()
-    }
-
-    fn edge_count(&self) -> usize {
-        (*self).edge_count()
-    }
-
-    fn has_edge(&self, u: usize, v: usize) -> bool {
-        (*self).has_edge(u, v)
-    }
+impl<G> Base for &G
+where
+    G: Base,
+{
+    type Vertex = G::Vertex;
 }
 
-impl<G: Vertices> Vertices for &G {
-    type VertexIter = G::VertexIter;
+impl<G> Vertices for &G
+where
+    G: Vertices,
+{
+    type VertexIter<'a> = G::VertexIter<'a> where Self: 'a;
 
     fn vertex_count(&self) -> usize {
         (*self).vertex_count()
     }
 
-    fn vertices(&self) -> Self::VertexIter {
-        (*self).vertices()
-    }
-
-    fn has_vertex(&self, v: Vertex) -> bool {
-        (*self).has_vertex(v)
+    fn vertices(&self) -> Self::VertexIter<'_> {
+        (**self).vertices()
     }
 }
 
-impl Edges for Vec<(usize, usize)> {
-    type EdgeIter = std::vec::IntoIter<(usize, usize)>;
+// fn has_vertex(&self, v: Self::Vertex) -> bool {
+//     (*self).has_vertex(v)
+// }
+// }
 
-    fn edges(&self) -> Self::EdgeIter {
-        self.clone().into_iter()
+impl<G> Edges for &G
+where
+    G: Edges,
+{
+    type EdgeIter<'a> = G::EdgeIter<'a> where Self: 'a;
+
+    fn edges(&self) -> Self::EdgeIter<'_> {
+        (**self).edges()
     }
 
     fn edge_count(&self) -> usize {
-        self.len()
-    }
-
-    fn has_edge(&self, u: usize, v: usize) -> bool {
-        self.contains(&(u, v))
+        (**self).edge_count()
     }
 }
 
-pub trait IntoEdges {
-    type EdgeIter: Iterator<Item = (usize, usize)>;
-
-    fn into_edges(self) -> Self::EdgeIter;
-}
-
-impl IntoEdges for Vec<(usize, usize)> {
-    type EdgeIter = std::vec::IntoIter<(usize, usize)>;
-
-    fn into_edges(self) -> Self::EdgeIter {
-        self.into_iter()
-    }
-}
+//     fn has_edge(&self, u: Self::Vertex, v: Self::Vertex) -> bool {
+//         (*self).has_edge(u, v)
+//     }
+// }

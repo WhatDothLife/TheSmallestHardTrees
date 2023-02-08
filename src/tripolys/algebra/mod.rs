@@ -2,5 +2,5 @@
 
 mod polymorphism;
 
+pub use polymorphism::MetaProblem;
 pub use polymorphism::Condition;
-pub use polymorphism::Polymorphism;

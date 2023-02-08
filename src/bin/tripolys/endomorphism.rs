@@ -1,7 +1,7 @@
 use clap::{App, Arg, ArgGroup, ArgMatches, SubCommand};
 use colored::*;
 use itertools::Itertools;
-use tripolys::solve::Problem;
+use tripolys::{csp::Problem, graph::AdjList};
 
 use crate::{parse_graph, print_stats, CmdResult};
 
@@ -38,7 +38,7 @@ pub fn cli() -> App<'static, 'static> {
 
 pub fn command(args: &ArgMatches) -> CmdResult {
     let graph = args.value_of("graph").unwrap();
-    let h: Vec<(usize, usize)> = parse_graph(graph)?;
+    let h: AdjList<usize> = parse_graph(graph)?;
 
     println!("\n> Checking graph...");
     let mut problem = Problem::new(&h, &h);
@@ -53,9 +53,9 @@ pub fn command(args: &ArgMatches) -> CmdResult {
         }
     }
     if injective {
-        println!("{}", format!("  ✓ {} is a core\n", graph).green());
+        println!("{}", format!("  ✓ {graph} is a core\n").green());
     } else {
-        println!("{}", format!("  ! {} is not a core\n", graph).red());
+        println!("{}", format!("  ! {graph} is not a core\n").red());
         if args.is_present("find") {
             let (_, i) = sols
                 .iter()
@@ -71,7 +71,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
         }
     }
 
-    print_stats(problem.stats());
+    print_stats(problem.stats().unwrap());
 
     Ok(())
 }

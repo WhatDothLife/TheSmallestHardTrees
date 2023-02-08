@@ -13,7 +13,7 @@ use tripolys::graph::{
     classes::*,
     formats::{from_csv, from_triad},
 };
-use tripolys::solve::solver::SolveStats;
+use tripolys::csp::SolveStats;
 
 mod dot;
 mod endomorphism;
@@ -64,7 +64,7 @@ fn main() {
     }
 }
 
-fn parse_graph<G>(s: &str) -> Result<G, Box<dyn Error>>
+fn parse_graph<G>(s: &str) -> Result<G, ParseGraphError>
 where
     G: FromIterator<(usize, usize)>,
 {
@@ -79,7 +79,7 @@ where
             return Ok(g);
         }
     }
-    Err(Box::new(ParseGraphError))
+    Err(ParseGraphError)
 }
 
 fn from_class<G: FromIterator<(usize, usize)>>(class: &str) -> Result<G, ClassNotFound> {
@@ -119,10 +119,12 @@ impl std::fmt::Display for ClassNotFound {
 
 impl std::error::Error for ClassNotFound {}
 
-fn print_stats(ss: &SolveStats) {
+#[rustfmt::skip]
+fn print_stats(stats: SolveStats) {
     println!("Statistics:");
-    println!("- {: <14} {:?}s", "t(ac3):", ss.ac3_time.as_secs_f32());
-    println!("- {: <14} {:?}s", "t(mac3):", ss.mac3_time.as_secs_f32());
-    println!("- {: <14} {}", "#backtracks:", ss.backtracks);
-    println!("- {: <14} {}", "#cons. checks:", ss.ccks);
+    println!("- {: <20} {:?}", "AC3 time:", stats.ac3_time);
+    println!("- {: <20} {:?}", "MAC3 time:", stats.mac3_time);
+    println!("- {: <20} {:?}", "Total time:", stats.mac3_time + stats.ac3_time);
+    println!("- {: <20} {}", "#backtracks:", stats.backtracks);
+    println!("- {: <20} {}", "#consistency checks:", stats.ccks);
 }

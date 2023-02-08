@@ -5,6 +5,7 @@ pub struct Domain<T> {
     domain: Vec<T>,
     size: usize,
     states: Vec<usize>,
+    modified: bool,
 }
 
 impl<T> Domain<T> {
@@ -13,6 +14,7 @@ impl<T> Domain<T> {
             domain: Vec::new(),
             size: 0,
             states: Vec::new(),
+            modified: false,
         }
     }
 
@@ -38,15 +40,21 @@ impl<T> Domain<T> {
         self.domain.swap(index, self.size);
     }
 
+    pub fn is_modified(&self) -> bool {
+        self.modified
+    }
+
     pub fn push_state(&mut self) {
-        self.states.push(self.size)
+        self.states.push(self.size);
+        self.modified = true;
     }
 
     pub fn pop_state(&mut self) {
         self.size = self.states.pop().unwrap();
+        self.modified = false;
     }
 
-    pub fn iter<'a>(&'a self) -> Iter<'a, T> {
+    pub fn iter(&self) -> Iter<'_, T> {
         Iter {
             domain: self.domain.iter(),
             count: self.size,
@@ -62,6 +70,7 @@ impl<T> FromIterator<T> for Domain<T> {
             size: domain.len(),
             domain,
             states: Vec::new(),
+            modified: false,
         }
     }
 }
@@ -113,6 +122,71 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_name() {
+    fn test_domain_new() {
+        let domain = Domain::<i32>::new();
+        assert_eq!(domain.size(), 0);
+        assert!(domain.is_empty());
+    }
+
+    #[test]
+    fn test_domain_assign_and_reset() {
+        let mut domain = Domain::from_iter(vec![1, 2, 3]);
+        assert_eq!(domain.size(), 3);
+        assert!(!domain.is_empty());
+
+        domain.assign(1);
+        assert_eq!(domain.size(), 1);
+        assert_eq!(domain[0], 2);
+
+        domain.reset();
+        assert_eq!(domain.size(), 3);
+        assert_eq!(domain[0], 2);
+    }
+
+    #[test]
+    fn test_domain_remove() {
+        let mut domain = Domain::from_iter(vec![1, 2, 3]);
+        domain.remove(1);
+        assert_eq!(domain.size(), 2);
+        assert_eq!(domain[0], 1);
+        assert_eq!(domain[1], 3);
+    }
+
+    // #[test]
+    // fn test_domain_push_and_pop_state() {
+    //     let mut domain = Domain::from_iter(vec![1, 2, 3]);
+    //     domain.push_state();
+    //     domain.assign(2);
+    //     assert_eq!(domain.size(), 1);
+
+    //     domain.pop_state();
+    //     assert_eq!(domain.size(), 3);
+    //     assert_eq!(domain[0], 3);
+    // }
+
+    #[test]
+    fn test_domain_iter() {
+        let domain = Domain::from_iter(vec![1, 2, 3]);
+        let mut iter = domain.iter();
+
+        assert_eq!(iter.next(), Some(&1));
+        assert_eq!(iter.next(), Some(&2));
+        assert_eq!(iter.next(), Some(&3));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn test_domain_index() {
+        let domain = Domain::from_iter(vec![1, 2, 3]);
+        assert_eq!(domain[0], 1);
+        assert_eq!(domain[1], 2);
+        assert_eq!(domain[2], 3);
+    }
+
+    #[test]
+    fn test_domain_index_mut() {
+        let mut domain = Domain::from_iter(vec![1, 2, 3]);
+        domain[0] = 4;
+        assert_eq!(domain[0], 4);
     }
 }

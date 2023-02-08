@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 
 use crate::tree::{is_core_tree, is_rooted_core_tree, Node};
 use itertools::Itertools;
@@ -17,8 +17,8 @@ macro_rules! stat {
 
 /// Returns every set of `k` integers that sum up to `n` sorted in ascending order.
 ///
-/// E.g. `calculate_addends(6, 3)` yields [[1, 1, 4], [1, 2, 3], [2, 2, 2]].
-fn addends(n: usize, k: usize) -> Vec<Vec<usize>> {
+/// E.g. `split_into_sums(6, 3)` yields [[1, 1, 4], [1, 2, 3], [2, 2, 2]].
+fn split_into_sums(n: usize, k: usize) -> Vec<Vec<usize>> {
     fn inner(pos: usize, left: usize, k: usize, last: usize) -> Vec<Vec<usize>> {
         // Base Case
         if pos == k {
@@ -62,10 +62,6 @@ pub struct TreeGenConfig {
     pub core: bool,
     /// Record statistics
     pub stats: Option<TreeGenStats>,
-    // /// Maximal degree of each node
-    // pub max_arity: usize,
-    // /// Only enumerate triads
-    // pub triad: bool,
 }
 
 /// Statistics from the execution of tree generation algorithm.
@@ -81,230 +77,134 @@ pub struct TreeGenStats {
     pub num_cc: usize,
 }
 
-// pub struct TreeGenerator {
-//     rooted_trees: Vec<Vec<Arc<Node>>>,
-//     settings: TreeGenConfig,
-//     nvertices: usize,
-// }
-
-impl TreeGenerator {
-    pub fn new(config: TreeGenConfig) -> TreeGenerator {
-        assert!(
-            config.start != 0,
-            "There is no tree with {} nodes",
-            config.start
-        );
-
-        TreeGenerator {
-            rooted_trees: vec![vec![Arc::new(Node::leaf())]],
-            nvertices: config.start,
-            settings: config,
-        }
-    }
-
-    /// Returns all unique sets of `k` rooted trees whose number of nodes sum up
-    /// to `n`. The trees are sorted by their number of nodes in ascending
-    /// order.
-    fn rooted_trees(&self, n: usize, k: usize) -> impl Iterator<Item = Vec<Arc<Node>>> + '_ {
-        addends(n, k)
-            .into_iter()
-            .flat_map(|set| {
-                set.into_iter()
-                    .map(|nvertices| self.rooted_trees[nvertices - 1].iter().cloned())
-                    .multi_cartesian_product()
-            })
-            .filter(|vec| vec.windows(2).all(|w| w[0] <= w[1])) // excludes permutations
-    }
-
-    fn generate_rooted_trees(&mut self) {
-        for step in self.rooted_trees.len() + 1..self.nvertices {
-            let mut trees = Vec::<Vec<Arc<Node>>>::new();
-            // let mut rcc_time = time::OffsetDateTime::now_utc();
-            let mut num_rcc = 0;
-
-            for arity in 1..self.settings.max_arity {
-                let treenagers = self
-                    .rooted_trees(step - 1, arity)
-                    .par_bridge()
-                    .flat_map(|children| connect_by_vertex(&children))
-                    .collect::<Vec<_>>();
-
-                num_rcc += treenagers.len();
-                // let start = Instant::now();
-                let filtered = treenagers
-                    .into_par_iter()
-                    .filter_map(|child| {
-                        if !self.settings.core || is_rooted_core_tree(&child, 0) {
-                            Some(Arc::new(child))
-                        } else {
-                            None
-                        }
-                    })
-                    .collect::<Vec<_>>();
-
-                // rc_time += start.elapsed();
-                trees.push(filtered);
-            }
-            let trees = trees.into_iter().flatten().collect_vec();
-
-            if let Some(mut stats) = self.settings.stats {
-                // stats.rcc_time = rcc_time; TODO
-                stats.num_rcc = num_rcc;
-            }
-            self.rooted_trees.push(trees);
-        }
-    }
-
-    fn generate_trees(&mut self) -> Vec<Node> {
-        self.generate_rooted_trees();
-
-        // A tree with centre is a rooted tree where at least two children of the root
-        // have height d−1
-        let centered = (2..=self.nvertices)
-            .flat_map(|arity| {
-                self.rooted_trees(self.nvertices - 1, arity)
-                    .flat_map(|children| connect_by_vertex(&children))
-            })
-            .filter(|tree| tree.is_centered());
-
-        // A bicentered tree is formed by taking two rooted trees of equal
-        // height and adding an edge between their roots
-        let bicentered = self
-            .rooted_trees(self.nvertices, 2)
-            .filter(|c| c[0].height == c[1].height)
-            .flat_map(|v| connect_by_edge(&v[0], &v[1]));
-
-        centered.chain(bicentered).collect()
-    }
-
-    pub fn generate(&mut self) -> Vec<Node> {
-        if self.nvertices == 1 {
-            return vec![Node::leaf()];
-        }
-
-        let trees = self.generate_trees();
-
-        let num_cc = trees.len();
-        let filtered = trees
-            .into_par_iter()
-            .filter(|t| !self.settings.core || is_core_tree(t))
-            .collect::<Vec<_>>();
-        stat!(config.num_cc = num_cc);
-        stat!(config.cc_time = cc_time);
-        self.nvertices += 1;
-
-        filtered
-    }
-}
-
-/// Connects two rooted trees by adding an edge between their roots.
-/// `child` becomes the rightmost child of `tree`.
-///
-/// If the two trees happen to be the same, we only add an edge once.
-fn connect_by_edge(tree: Arc<Node>, child: Arc<Node>) -> Vec<Node> {
-    let connect = |dir| {
-        tree.iter()
-            .chain(std::iter::once((child.clone(), dir)))
-            .collect()
-    };
-
-    if *tree == *child {
-        [true].iter().map(|&dir| connect(dir)).collect()
-    } else {
-        [true, false].iter().map(|&dir| connect(dir)).collect()
-    }
-}
-
-/// Connects an arbitrary number of rooted trees by adding a new vertex that is
-/// adjacent to each of their roots.
-fn connect_by_vertex(children: impl IntoIterator<Item = Arc<Node>>) -> Vec<Node> {
-    (0..children.len())
-        .map(|_| [true, false])
-        .multi_cartesian_product()
-        .map(|edges| children.into_iter().cloned().zip(edges))
-        .filter(|v| v.clone().tuple_windows().all(|(a, b)| a <= b)) // excludes permutations
-        .map(|t| t.collect())
+/// Returns all unique sets of `k` children whose number of nodes sum up to `n`.
+/// The trees are sorted by their number of nodes in ascending order.
+fn collect_children(n: usize, k: usize, rooted_trees: &[Vec<Arc<Node>>]) -> Vec<Vec<Arc<Node>>> {
+    split_into_sums(n, k)
+        .into_iter()
+        .flat_map(|sum| {
+            sum.into_iter()
+                .map(|a| rooted_trees[a].iter().cloned())
+                .multi_cartesian_product()
+        })
+        .filter(|vec| vec.is_sorted()) // excludes permutations
         .collect()
 }
 
-/// Returns all unique sets of `k` rooted trees whose number of nodes sum up
-/// to `n`. The trees are sorted by their number of nodes in ascending
-/// order.
-fn rooted_trees(
-    rooted_trees: Vec<Vec<Arc<Node>>>,
+fn generate_rooted_trees(
     n: usize,
-    k: usize,
-) -> impl Iterator<Item = Vec<Arc<Node>>> + '_ {
-    addends(n, k)
-        .into_iter()
-        .flat_map(|set| {
-            set.into_iter()
-                .map(|nvertices| rooted_trees[nvertices - 1].iter().cloned())
-                .multi_cartesian_product()
-        })
-        .filter(|vec| vec.windows(2).all(|w| w[0] <= w[1])) // excludes permutations
-}
-
-fn generate_rooted_trees(n: usize, config: &TreeGenConfig) {
-    for step in self.rooted_trees.len() + 1..self.nvertices {
-        let mut trees = Vec::<Vec<Arc<Node>>>::new();
-        // let mut rcc_time = time::OffsetDateTime::now_utc();
-        let mut num_rcc = 0;
-
-        for arity in 1..config.max_arity {
-            let treenagers = rooted_trees(step - 1, arity)
-                .par_bridge()
-                .flat_map(|children| connect_by_vertex(&children))
-                .collect::<Vec<_>>();
-
-            num_rcc += treenagers.len();
-            // let start = Instant::now();
-            let filtered = treenagers
-                .into_par_iter()
-                .filter_map(|child| {
-                    if !config.core || is_rooted_core_tree(&child, 0) {
-                        Some(Arc::new(child))
-                    } else {
-                        None
-                    }
-                })
-                .collect::<Vec<_>>();
-
-            // rc_time += start.elapsed();
-            trees.push(filtered);
-        }
-        let trees = trees.into_iter().flatten().collect_vec();
-
-        stat!(config.num_rcc = num_rcc);
-        stat!(config.rcc_time = rcc_time);
-
-        // self.rooted_trees.push(trees);
+    rooted_trees: &mut [Vec<Arc<Node>>],
+    config: &TreeGenConfig,
+) -> Vec<Node> {
+    if n == 0 {
+        return vec![];
     }
+    if n == 1 {
+        return vec![Node::leaf()];
+    }
+
+    let mut rcc_time = Instant::now();
+    // let mut num_rcc = 0;
+    let mut trees = trees(n, rooted_trees);
+    // num_rcc += trees.len();
+
+    let start = Instant::now();
+
+    if config.core {
+        trees = trees
+            .into_par_iter()
+            .filter(|child| is_rooted_core_tree(child, 0))
+            .collect();
+    }
+
+    rcc_time += start.elapsed();
+
+    stat!(config.num_rcc = num_rcc);
+    stat!(config.rcc_time = rcc_time);
+    trees
 }
 
-fn generate_trees(n: usize, config: &TreeGenConfig) {
-    let rooted_trees = vec![vec![Arc::new(Node::leaf())]];
-    self.generate_rooted_trees();
+pub fn generate_trees(
+    n: usize,
+    rooted_trees: &mut Vec<Vec<Arc<Node>>>,
+    config: &TreeGenConfig,
+) -> Vec<Node> {
+    if n == 0 {
+        return vec![];
+    }
+    if n == 1 {
+        return vec![Node::leaf()];
+    }
 
-    // A tree with centre is a rooted tree where at least two children of the root
-    // have height d−1
-    let centered = (2..=self.nvertices)
-        .flat_map(|arity| {
-            self.rooted_trees(self.nvertices - 1, arity)
-                .flat_map(|children| connect_by_vertex(&children))
+    for i in rooted_trees.len()..n {
+        let trees = generate_rooted_trees(i, rooted_trees, config)
+            .into_iter()
+            .map(Arc::new)
+            .collect();
+
+        rooted_trees.push(trees);
+    }
+    let centered = generate_centered_trees(n, rooted_trees);
+    let bicentered = generate_bicentered_trees(n, rooted_trees);
+
+    let trees = centered.into_iter().chain(bicentered);
+
+    if config.core {
+        return trees.par_bridge().filter(|t| is_core_tree(t)).collect();
+    }
+
+    trees.collect()
+}
+
+fn trees(n: usize, rooted_trees: &[Vec<Arc<Node>>]) -> Vec<Node> {
+    let connect = |children: Vec<Arc<Node>>| {
+        (0..children.len())
+            .map(|_| [true, false])
+            .multi_cartesian_product()
+            .map(|edges| children.iter().cloned().zip(edges))
+            .filter(|v| v.clone().is_sorted())
+            .map(|t| t.collect())
+            .collect::<Vec<_>>()
+    };
+
+    (0..n)
+        .flat_map(|k| {
+            collect_children(n - 1, k, rooted_trees)
+                .into_iter()
+                .flat_map(connect)
         })
-        .filter(|tree| tree.is_centered());
-
-    // A bicentered tree is formed by taking two rooted trees of equal
-    // height and adding an edge between their roots
-    let bicentered = self
-        .rooted_trees(self.nvertices, 2)
-        .filter(|c| c[0].height == c[1].height)
-        .flat_map(|v| connect_by_edge(&v[0], &v[1]));
-
-    centered.chain(bicentered).collect()
+        .collect()
 }
 
-fn connect_by_edge_2(tree: Arc<Node>, child: Arc<Node>, dir: bool) -> Node {
-    tree.iter().chain(std::iter::once((child, dir))).collect()
+// A tree with centre is a rooted tree where at least two children of the root
+// have height d−1
+fn generate_centered_trees(n: usize, rooted_trees: &[Vec<Arc<Node>>]) -> Vec<Node> {
+    trees(n, rooted_trees)
+        .into_par_iter()
+        .filter(|t| t.is_centered())
+        .collect()
+}
+
+// A bicentered tree is formed by taking two rooted trees of equal height and
+// adding an edge between their roots
+fn generate_bicentered_trees(n: usize, rooted_trees: &[Vec<Arc<Node>>]) -> Vec<Node> {
+    let connect = |tree: Arc<Node>, child: Arc<Node>| {
+        if *tree == *child {
+            let mut t1 = (*tree).clone();
+            t1.push_child(child, true);
+            vec![t1]
+        } else {
+            let mut t1 = (*tree).clone();
+            t1.push_child(child.clone(), true);
+            let mut t2 = (*tree).clone();
+            t2.push_child(child, false);
+            vec![t1, t2]
+        }
+    };
+
+    collect_children(n, 2, rooted_trees)
+        .into_iter()
+        .filter(|c| c[0].height == c[1].height)
+        .flat_map(|c| connect(c[0].clone(), c[1].clone()))
+        .collect()
 }

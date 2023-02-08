@@ -1,5 +1,5 @@
-use tripolys::graph::{formats::to_dot, AdjMatrix};
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
+use tripolys::graph::{formats::to_dot, AdjList};
 
 use crate::{parse_graph, CmdResult};
 
@@ -26,7 +26,7 @@ pub fn cli() -> App<'static, 'static> {
 }
 
 pub fn command(args: &ArgMatches) -> CmdResult {
-    let graph: AdjMatrix = parse_graph(args.value_of("graph").unwrap())?;
+    let graph: AdjList<usize> = parse_graph(args.value_of("graph").unwrap())?;
     let mut f = std::fs::File::create(args.value_of("out").unwrap())?;
     to_dot(&graph, &mut f)?;
 

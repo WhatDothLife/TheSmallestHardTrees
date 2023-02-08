@@ -1,10 +1,11 @@
-//! A set of vertices connected by directed edges.
+//! Data-structures and abstractions for working with digraphs.
 
+mod adjlist;
 mod adjmatrix;
-mod adjmap;
 pub mod classes;
+mod edgelist;
 pub mod formats;
 pub mod traits;
 
+pub use adjlist::AdjList;
 pub use adjmatrix::AdjMatrix;
-pub use adjmap::AdjMap;
