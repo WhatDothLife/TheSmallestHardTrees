@@ -4,10 +4,18 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::str::FromStr;
 
+use crate::csp::Problem;
 use crate::graph::classes::directed_path;
 use crate::graph::traits::{Contract, Digraph, Edges, Vertices};
 use crate::graph::AdjList;
-use crate::csp::Problem;
+
+pub fn is_balanced<G>(g: G) -> bool
+where
+    G: Digraph,
+{
+    let h: AdjList<_> = directed_path(g.edge_count());
+    Problem::new(g, h).solution_exists()
+}
 
 pub fn levels<G>(g: G) -> Option<Vec<usize>>
 where
