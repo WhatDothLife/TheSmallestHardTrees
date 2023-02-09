@@ -20,7 +20,6 @@ where
 pub fn levels<G>(g: G) -> Option<Vec<usize>>
 where
     G: Digraph,
-    G::Vertex: Debug,
 {
     for k in 0..g.vertex_count() {
         let h: AdjList<_> = directed_path(k + 1);
