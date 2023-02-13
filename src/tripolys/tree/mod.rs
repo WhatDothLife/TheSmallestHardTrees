@@ -1,9 +1,10 @@
 //! Data-structure and algorithm for generating trees.
 
-pub mod generate;
-mod node;
+mod generate;
+mod tree;
 
-pub use node::Node;
+pub use tree::Tree;
+pub use generate::*;
 
 use crate::{graph::traits::Digraph, csp::Problem};
 
@@ -12,7 +13,8 @@ use crate::{graph::traits::Digraph, csp::Problem};
 /// # Examples
 ///
 /// ```
-/// use crate::graph::AdjList;
+/// use tripolys::graph::AdjList;
+/// use tripolys::tree::is_core_tree;
 ///
 /// let tree = AdjList::from_edges([(0, 1), (1, 2), (2, 3)]);
 /// assert!(is_core_tree(&tree));
@@ -45,7 +47,9 @@ where
 /// # Examples
 ///
 /// ```
-/// use crate::graph::AdjList;
+/// use tripolys::graph::AdjList;
+/// use tripolys::tree::is_core_tree;
+/// use tripolys::tree::is_rooted_core_tree;
 ///
 /// let tree = AdjList::from_edges([(0, 1), (2, 1), (3, 2)]);
 /// assert!(!is_core_tree(&tree));

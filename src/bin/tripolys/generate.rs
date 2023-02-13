@@ -1,6 +1,6 @@
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 use tripolys::graph::formats::to_edge_list;
-use tripolys::tree::generate::{generate_trees, TreeGenConfig, TreeGenStats};
+use tripolys::tree::*;
 
 use std::fs::{create_dir_all, File};
 use std::io::{BufWriter, Write};
@@ -60,8 +60,6 @@ pub fn command(args: &ArgMatches) -> CmdResult {
 
     let config = TreeGenConfig {
         core,
-        start,
-        end,
         stats: Some(TreeGenStats::default()),
     };
 
