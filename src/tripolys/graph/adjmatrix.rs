@@ -3,9 +3,9 @@ use std::cmp;
 use bitvec::bitvec;
 use bitvec::vec::BitVec;
 
-use super::traits::{Base, HasEdge};
+use super::traits::{VertexType, HasEdge};
 
-/// AdjMatrix is a graph datastructure using a matrix representation.
+/// AdjMatrix is a graph using a matrix representation.
 ///
 /// It is used in the backtracking algorithm, because of frequent edge-lookup
 /// which it implements in O(1).
@@ -47,7 +47,7 @@ impl AdjMatrix {
     }
 }
 
-impl Base for AdjMatrix {
+impl VertexType for AdjMatrix {
     type Vertex = usize;
 }
 

@@ -19,29 +19,29 @@ impl<V> Default for Neighbors<V> {
     }
 }
 
-/// AdjList<V> is a graph datastructure using an adjacency list representation.
+/// AdjList<V> is a graph using an adjacency list representation.
 ///
 /// Each vertex is identified by a value of type V. The graph is stored as an
-/// adjacency list, where each vertex is associated with a Neighbors<V> struct
-/// that holds two IndexSets: one for outgoing edges and one for incoming edges.
+/// adjacency list, where each vertex is associated with two lists: one for
+/// outgoing edges and one for incoming edges.
 ///
-/// The vertices in the graph must implement the Hash, Clone, and Eq traits.
-/// We allow non-Copy types like `Vec` because it represents a tuple of any
-/// arity which we need to build indicator graph of a metaproblem. For the same
-/// reason it also implements fast contraction of vertices.
+/// The vertices in the graph must implement the Hash, Clone, and Eq traits.  We
+/// allow non-Copy types like `Vec` because it represents a tuple of any arity
+/// which we need to build the indicator graph of a metaproblem. It also
+/// implements fast contraction of vertices.
 #[derive(Clone, Debug, Default)]
 pub struct AdjList<V> {
     lists: IndexMap<V, Neighbors<V>>,
 }
 
 impl<V: Hash + Clone + Eq> AdjList<V> {
-    fn new() -> AdjList<V> {
+    pub fn new() -> AdjList<V> {
         AdjList {
             lists: IndexMap::new(),
         }
     }
 
-    fn add_edge(&mut self, u: V, v: V) {
+    pub fn add_edge(&mut self, u: V, v: V) {
         self.lists
             .entry(u.clone())
             .or_default()
@@ -58,7 +58,7 @@ impl<V: Hash + Clone + Eq> AdjList<V> {
     }
 }
 
-impl<V: Hash + Clone + Eq> Base for AdjList<V> {
+impl<V: Hash + Clone + Eq> VertexType for AdjList<V> {
     type Vertex = V;
 }
 

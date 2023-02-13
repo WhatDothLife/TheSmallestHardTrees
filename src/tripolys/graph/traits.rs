@@ -1,48 +1,68 @@
-//! Traits for graph data structures.
+//! Traits for digraph.
 
 use std::hash::Hash;
 
-pub trait Base {
+/// Defines the type of vertex of a graph.
+pub trait VertexType {
+    /// Type of vertex.
     type Vertex: Hash + Clone + Eq;
 }
 
-pub trait Build: Base {
+/// A trait for building digraphs.
+pub trait Build: VertexType {
+    /// Adds a new vertex to the graph.
     fn add_vertex(&mut self, v: Self::Vertex);
 
+    /// Adds a new edge to the graph, connecting vertices `u` and `v`.
     fn add_edge(&mut self, u: Self::Vertex, v: Self::Vertex);
 }
 
-pub trait Vertices: Base {
+/// Access the vertices of a digraph.
+pub trait Vertices: VertexType {
+    /// Iterator over the vertices of the graph.
     type VertexIter<'a>: Iterator<Item = Self::Vertex>
     where
         Self: 'a;
 
+    /// Returns an iterator over the vertices of the graph.
     fn vertices(&self) -> Self::VertexIter<'_>;
 
+    /// Returns the number of vertices in the graph.
     fn vertex_count(&self) -> usize;
 }
 
-pub trait HasVertex: Base {
+/// Check if a graph has a specific vertex.
+pub trait HasVertex: VertexType {
+    /// Returns true if the graph contains the vertex `v`.
     fn has_vertex(&self, v: Self::Vertex) -> bool;
 }
 
-pub trait Edges: Base {
+/// Access the edges of a digraph.
+pub trait Edges: VertexType {
+    /// Iterator over the edges of the graph.
     type EdgeIter<'a>: Iterator<Item = (Self::Vertex, Self::Vertex)>
     where
         Self: 'a;
 
+    /// Returns an iterator over the edges of the graph.
     fn edges(&self) -> Self::EdgeIter<'_>;
 
+    /// Returns the number of edges in the graph.
     fn edge_count(&self) -> usize;
 }
 
-pub trait HasEdge: Base {
+/// Check if a graph has a specific edge.
+pub trait HasEdge: VertexType {
+    /// Returns true if the graph contains an edge from `u` to `v`.
     fn has_edge(&self, u: Self::Vertex, v: Self::Vertex) -> bool;
 }
 
-pub trait Contract: Base {
+/// Contract vertices in a digraph.
+pub trait Contract: VertexType {
+    /// Contracts the vertices `u` and `v` in the graph. Returns true if the contraction was successful.
     fn contract_vertex(&mut self, u: Self::Vertex, v: Self::Vertex) -> bool;
 
+    /// Contracts the vertices in `vertices` in the graph.
     fn contract_vertices<I>(&mut self, vertices: I)
     where
         I: IntoIterator<Item = Self::Vertex>,
@@ -57,13 +77,14 @@ pub trait Contract: Base {
     }
 }
 
+/// A directed graph.
 pub trait Digraph: Vertices + Edges {}
 
 impl<G> Digraph for G where G: Vertices + Edges {}
 
-impl<G> Base for &G
+impl<G> VertexType for &G
 where
-    G: Base,
+    G: VertexType,
 {
     type Vertex = G::Vertex;
 }
@@ -83,10 +104,14 @@ where
     }
 }
 
-// fn has_vertex(&self, v: Self::Vertex) -> bool {
-//     (*self).has_vertex(v)
-// }
-// }
+impl<G> HasVertex for &G
+where
+    G: HasVertex,
+{
+    fn has_vertex(&self, v: Self::Vertex) -> bool {
+        (*self).has_vertex(v)
+    }
+}
 
 impl<G> Edges for &G
 where
@@ -103,7 +128,11 @@ where
     }
 }
 
-//     fn has_edge(&self, u: Self::Vertex, v: Self::Vertex) -> bool {
-//         (*self).has_edge(u, v)
-//     }
-// }
+impl<G> HasEdge for &G
+where
+    G: HasEdge,
+{
+    fn has_edge(&self, u: Self::Vertex, v: Self::Vertex) -> bool {
+        (*self).has_edge(u, v)
+    }
+}

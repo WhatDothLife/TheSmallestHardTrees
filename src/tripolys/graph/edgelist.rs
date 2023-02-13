@@ -6,7 +6,7 @@ pub struct EdgeList<V> {
     edges: Vec<(V, V)>,
 }
 
-impl<V: Clone + Hash + Eq> Base for EdgeList<V> {
+impl<V: Clone + Hash + Eq> VertexType for EdgeList<V> {
     type Vertex = V;
 }
 

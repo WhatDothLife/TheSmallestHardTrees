@@ -9,7 +9,25 @@ use crate::graph::classes::directed_path;
 use crate::graph::traits::{Contract, Digraph, Edges, Vertices};
 use crate::graph::AdjList;
 
-pub fn is_balanced<G>(g: G) -> bool
+/// Returns `true` if the input graph `g` is balanced, `false` otherwise.
+///
+/// A digraph is considered balanced if its vertices can be organized into levels
+/// such that there exists a function lvl : H → N such that lvl(v) = lvl(u) + 1
+/// for all (u, v) ∈ E(H) and the smallest level is 0. The height of a balanced
+/// digraph is defined as the maximum level.
+///
+/// # Examples
+///
+/// ```
+/// use tripolys::graph::AdjList;
+/// use tripolys::algebra::is_balanced;
+///
+/// let mut g = AdjList::from_edges([(0, 1), (1, 2), (2, 3), (1, 4)]);
+/// assert!(is_balanced(&g));
+/// g.add_edge(0, 2);
+/// assert!(!is_balanced(&g));
+/// ```
+pub fn is_balanced<G>(g: &G) -> bool
 where
     G: Digraph,
 {
@@ -17,13 +35,13 @@ where
     Problem::new(g, h).solution_exists()
 }
 
-pub fn levels<G>(g: G) -> Option<Vec<usize>>
+pub fn levels<G>(g: &G) -> Option<Vec<usize>>
 where
     G: Digraph,
 {
-    for k in 0..g.vertex_count() {
+    for k in 0..g.edge_count() {
         let h: AdjList<_> = directed_path(k + 1);
-        let mut problem = Problem::new(&g, h);
+        let mut problem = Problem::new(g, h);
 
         if let Some(sol) = problem.solve_first() {
             return Some(sol.into_iter().collect());
@@ -150,7 +168,7 @@ impl std::fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-pub fn indicator_graph(
+fn indicator_graph(
     template: &AdjList<usize>,
     condition: Condition,
     level_wise: bool,
