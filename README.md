@@ -34,7 +34,7 @@ the commands to reproduce those results. Edgelists of all trees with up to 20 ve
 
 Installation
 -----------------
-The Rust code is compatible with Rust 2021. The Python code is compatible with Python 3.7.
+The Rust code is compatible with Rust 2021.
 
 ```
 git clone https://gitlab.com/WhatDothLife/tripolys.git
@@ -104,12 +104,7 @@ The trees not solved by Arc Consistency are
 [TODO]
 and this is how you can test them:
 
-Using the Python code:
-```
-import treeGeneration
-Ts = treeGeneration.getTreesFromFile('name of file with trees')
-TsNoAC = [T for T in Ts if not treeGeneration.isTotallySymmetric(T)]
-```
+[TODO]
 
 
 ### A tree not known to be in NL (Section 7.2.1)
