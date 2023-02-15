@@ -35,7 +35,10 @@ where
     G::Vertex: fmt::Display,
 {
     let mut s = String::from("[");
-    for (u, v) in g.edges() {
+    for (i, (u, v)) in g.edges().enumerate() {
+        if i != 0 {
+            s.push(',');
+        }
         s.push_str(&format!("({u},{v})"));
     }
     s.push(']');
@@ -87,7 +90,7 @@ where
     s.split(&['[', ']', ',', '(', ')', '"', ';'])
         .filter(|&x| !x.is_empty())
         .tuples()
-        .map(|(u, v)| (u.parse::<usize>().unwrap(), v.parse::<usize>().unwrap()))
+        .map(|(u, v)| (u.parse().unwrap(), v.parse().unwrap()))
         .collect()
 }
 
