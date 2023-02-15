@@ -28,7 +28,7 @@ where
 }
 
 /// Prints the graph in dot format.
-pub fn to_edge_list<G, W>(g: G, output: &mut W) -> Result<(), io::Error>
+pub fn to_edgelist<G, W>(g: G, output: &mut W) -> Result<(), io::Error>
 where
     G: Digraph,
     W: io::Write,

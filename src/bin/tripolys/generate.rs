@@ -1,5 +1,5 @@
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
-use tripolys::graph::formats::to_edge_list;
+use tripolys::graph::formats::to_edgelist;
 use tripolys::tree::*;
 
 use std::fs::{create_dir_all, File};
@@ -90,7 +90,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
         let mut writer = BufWriter::new(file);
 
         for tree in trees {
-            to_edge_list(&tree, &mut writer)?;
+            to_edgelist(&tree, &mut writer)?;
             writer.write_all(b"\n")?;
         }
     }
