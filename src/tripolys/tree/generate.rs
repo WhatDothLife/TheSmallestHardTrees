@@ -1,19 +1,8 @@
-use std::{sync::Arc, time::Instant};
+use std::{sync::Arc, time::Duration};
 
 use crate::tree::{is_core_tree, is_rooted_core_tree, Tree};
 use itertools::Itertools;
 use rayon::prelude::*;
-
-macro_rules! stat {
-    ($c:ident . $field:ident $($t:tt)*) => {
-        #[cfg(feature = "stats")]
-        {
-            if let Some(ref mut st) = $c.stats {
-                st . $field $($t)*;
-            }
-        }
-    }
-}
 
 /// Returns every set of `k` integers that sum up to `n` sorted in ascending order.
 ///
@@ -58,19 +47,17 @@ pub struct TreeGenConfig {
     pub triad: bool,
     /// Only generate cores
     pub core: bool,
-    /// Record statistics
-    pub stats: Option<TreeGenStats>,
 }
 
 /// Statistics from the execution of tree generation algorithm.
 #[derive(Clone, Debug, Default)]
 pub struct TreeGenStats {
     /// Time for rooted core checks
-    pub rcc_time: f32,
+    pub rcc_time: Duration,
     /// Number of generated rooted trees
     pub num_rcc: usize,
     /// Time for core checks
-    pub cc_time: f32,
+    pub cc_time: Duration,
     /// Number of generated trees
     pub num_cc: usize,
 }
@@ -92,7 +79,7 @@ fn collect_children(m: usize, k: usize, rooted_trees: &[Vec<Arc<Tree>>]) -> Vec<
 fn generate_rooted_trees(
     n: usize,
     rooted_trees: &mut [Vec<Arc<Tree>>],
-    config: &TreeGenConfig,
+    config: &mut TreeGenConfig,
 ) -> Vec<Tree> {
     if n == 0 {
         return vec![];
@@ -101,12 +88,7 @@ fn generate_rooted_trees(
         return vec![Tree::leaf()];
     }
 
-    let mut rcc_time = Instant::now();
-    // let mut num_rcc = 0;
     let mut trees = trees(n, rooted_trees);
-    // num_rcc += trees.len();
-
-    let start = Instant::now();
 
     if config.triad {
         trees = trees
@@ -121,19 +103,13 @@ fn generate_rooted_trees(
             .filter(|child| is_rooted_core_tree(child, 0))
             .collect();
     }
-
-
-    rcc_time += start.elapsed();
-
-    stat!(config.num_rcc = num_rcc);
-    stat!(config.rcc_time = rcc_time);
     trees
 }
 
 pub fn generate_trees(
     n: usize,
     rooted_trees: &mut Vec<Vec<Arc<Tree>>>,
-    config: &TreeGenConfig,
+    config: &mut TreeGenConfig,
 ) -> Vec<Tree> {
     if n == 0 {
         return vec![];

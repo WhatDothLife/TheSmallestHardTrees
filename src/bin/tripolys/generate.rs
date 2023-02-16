@@ -65,22 +65,19 @@ pub fn command(args: &ArgMatches) -> CmdResult {
     let core = args.is_present("core");
     let triad = args.is_present("triad");
 
-    let config = TreeGenConfig {
-        triad,
-        core,
-        stats: Some(TreeGenStats::default()),
-    };
+    let mut config = TreeGenConfig { triad, core };
 
     let mut rooted_trees = vec![];
 
     for n in start..=end {
-        println!("\n> #vertices: {n}");
+        println!("> Vertices: {n}");
         println!("  > Generating trees...");
 
         let tstart = Instant::now();
-        let trees = generate_trees(n, &mut rooted_trees, &config);
+        let trees = generate_trees(n, &mut rooted_trees, &mut config);
         let tend = tstart.elapsed();
         println!("    - total_time: {tend:?}");
+        println!("    - Generated trees: {:?}", trees.len());
 
         let dir_name = if n < 10 {
             String::from("0") + &n.to_string()
