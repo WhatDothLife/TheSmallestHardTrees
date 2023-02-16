@@ -49,6 +49,10 @@ impl Tree {
         false
     }
 
+    pub fn is_rooted_path(&self) -> bool {
+        self.is_path() && self.arity() == 1
+    }
+
     /// Returns `true` if the tree is a path.
     ///
     /// A path is an orientation of a tree which has only vertices of degree 2

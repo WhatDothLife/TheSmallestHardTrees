@@ -54,6 +54,8 @@ fn split_into_sums(n: usize, k: usize) -> Vec<Vec<usize>> {
 /// Configuration for tree generation algorithm.
 #[derive(Clone, Debug, Default)]
 pub struct TreeGenConfig {
+    /// Only generate triads
+    pub triad: bool,
     /// Only generate cores
     pub core: bool,
     /// Record statistics
@@ -75,8 +77,8 @@ pub struct TreeGenStats {
 
 /// Returns all unique sets of `k` children whose number of nodes sum up to `n`.
 /// The trees are sorted by their number of nodes in ascending order.
-fn collect_children(n: usize, k: usize, rooted_trees: &[Vec<Arc<Tree>>]) -> Vec<Vec<Arc<Tree>>> {
-    split_into_sums(n, k)
+fn collect_children(m: usize, k: usize, rooted_trees: &[Vec<Arc<Tree>>]) -> Vec<Vec<Arc<Tree>>> {
+    split_into_sums(m, k)
         .into_iter()
         .flat_map(|sum| {
             sum.into_iter()
@@ -106,12 +108,20 @@ fn generate_rooted_trees(
 
     let start = Instant::now();
 
+    if config.triad {
+        trees = trees
+            .into_par_iter()
+            .filter(|child| child.is_rooted_path())
+            .collect();
+    }
+
     if config.core {
         trees = trees
             .into_par_iter()
             .filter(|child| is_rooted_core_tree(child, 0))
             .collect();
     }
+
 
     rcc_time += start.elapsed();
 
@@ -140,35 +150,45 @@ pub fn generate_trees(
 
         rooted_trees.push(trees);
     }
-    let centered = generate_centered_trees(n, rooted_trees);
-    let bicentered = generate_bicentered_trees(n, rooted_trees);
-
-    let trees = centered.into_iter().chain(bicentered);
+    let mut trees = if config.triad {
+        generate_triads(n, rooted_trees)
+    } else {
+        let centered = generate_centered_trees(n, rooted_trees);
+        let bicentered = generate_bicentered_trees(n, rooted_trees);
+        centered.into_iter().chain(bicentered).collect()
+    };
 
     if config.core {
-        trees.par_bridge().filter(is_core_tree).collect()
-    } else {
-        trees.collect()
+        trees = trees.into_par_iter().filter(is_core_tree).collect();
     }
+
+    trees
+}
+
+fn connect(children: Vec<Arc<Tree>>) -> Vec<Tree> {
+    (0..children.len())
+        .map(|_| [true, false])
+        .multi_cartesian_product()
+        .map(|edges| children.iter().cloned().zip(edges))
+        .filter(|v| v.clone().is_sorted())
+        .map(|t| t.collect())
+        .collect::<Vec<_>>()
 }
 
 fn trees(n: usize, rooted_trees: &[Vec<Arc<Tree>>]) -> Vec<Tree> {
-    let connect = |children: Vec<Arc<Tree>>| {
-        (0..children.len())
-            .map(|_| [true, false])
-            .multi_cartesian_product()
-            .map(|edges| children.iter().cloned().zip(edges))
-            .filter(|v| v.clone().is_sorted())
-            .map(|t| t.collect())
-            .collect::<Vec<_>>()
-    };
-
     (0..n)
         .flat_map(|k| {
             collect_children(n - 1, k, rooted_trees)
                 .into_iter()
                 .flat_map(connect)
         })
+        .collect()
+}
+
+fn generate_triads(n: usize, rooted_trees: &[Vec<Arc<Tree>>]) -> Vec<Tree> {
+    collect_children(n - 1, 3, rooted_trees)
+        .into_par_iter()
+        .flat_map(connect)
         .collect()
 }
 
