@@ -27,6 +27,12 @@ pub fn cli() -> App<'static, 'static> {
                 .help("Whether the generated graphs should be triads"),
         )
         .arg(
+            Arg::with_name("no-write")
+                .short("n")
+                .long("no-write")
+                .help("Prevent the program from writing to disk"),
+        )
+        .arg(
             Arg::with_name("start")
                 .short("s")
                 .long("start")
@@ -65,6 +71,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
     let end = args.value_of("end").unwrap().parse::<usize>()?;
     let core = args.is_present("core");
     let triad = args.is_present("triad");
+    let no_write = args.is_present("no-write");
 
     let mut config = TreeGenConfig { triad, core };
 
@@ -80,20 +87,22 @@ pub fn command(args: &ArgMatches) -> CmdResult {
         println!("    - total_time: {tend:?}");
         println!("    - Generated trees: {:?}", trees.len());
 
-        let dir_name = if n < 10 {
-            String::from("0") + &n.to_string()
-        } else {
-            n.to_string()
-        };
+        if !no_write {
+            let dir_name = if n < 10 {
+                String::from("0") + &n.to_string()
+            } else {
+                n.to_string()
+            };
 
-        let dir = path.join(dir_name);
-        create_dir_all(&dir)?;
-        let file = File::create(dir.join(file_name(core, triad)))?;
-        let mut writer = BufWriter::new(file);
+            let dir = path.join(dir_name);
+            create_dir_all(&dir)?;
+            let file = File::create(dir.join(file_name(core, triad)))?;
+            let mut writer = BufWriter::new(file);
 
-        for tree in trees {
-            writer.write_all(edge_list(&tree).as_bytes())?;
-            writer.write_all(b"\n")?;
+            for tree in trees {
+                writer.write_all(edge_list(&tree).as_bytes())?;
+                writer.write_all(b"\n")?;
+            }
         }
     }
 
