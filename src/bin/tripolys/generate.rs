@@ -1,5 +1,6 @@
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
-use tripolys::graph::formats::to_edgelist;
+use itertools::Itertools;
+use tripolys::graph::traits::Edges;
 use tripolys::tree::*;
 
 use std::fs::{create_dir_all, File};
@@ -91,7 +92,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
         let mut writer = BufWriter::new(file);
 
         for tree in trees {
-            to_edgelist(&tree, &mut writer)?;
+            writer.write_all(edge_list(&tree).as_bytes())?;
             writer.write_all(b"\n")?;
         }
     }
@@ -106,4 +107,11 @@ fn file_name(core: bool, triad: bool) -> &'static str {
         (false, true) => "triads.edges",
         (false, false) => "trees.edges",
     }
+}
+
+fn edge_list(tree: &Tree) -> String {
+    tree.edges()
+        .map(|(u, v)| format!("{u},{v}"))
+        .intersperse(",".to_string())
+        .collect()
 }
