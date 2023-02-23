@@ -5,9 +5,11 @@ A program for checking homomorphisms and testing polymorphism conditions of
 directed graphs. Also implements an algorithm to generate orientations of trees,
 and core orientations of trees. 
 
-This repository contains companion code for the following paper. If you use this
-code, please cite the paper. You can use the bibtex reference below. (TODO
-update once published)
+This repository contains companion code for the following paper. The results  be
+found in a separate data repository over
+[here](https://github.com/WhatDothLife/HardTreesData). If you use this code,
+please cite the paper. You can use the bibtex reference below. (TODO update once
+published)
 
 _M. Bodirsky, J. Bulín, F. Starke, and M. Wernthaler. The smallest hard trees, arXiv:2205.07528 [math.RA] (May 2022)_
 https://doi.org/10.48550/arXiv.2205.07528
@@ -30,15 +32,16 @@ Introduction
 In the paper *The Smallest Hard Trees*, we study computational and descriptive
 complexity of fixed-template CSPs for small orientations of trees. The paper
 contains a number of experimental results (see Section 7). Below you can find
-the commands to reproduce those results. Edgelists of all trees with up to 20 vertices can be found [here](https://gitlab.com/WhatDothLife/tripolys_data/-/tree/master/).
+the commands to reproduce those results. The commands assume that the data
+repository has been cloned to `data/`.
 
 Installation
 -----------------
 The Rust code is compatible with Rust 2021.
 
 ```
-git clone https://gitlab.com/WhatDothLife/tripolys.git
-cd tripolys
+git clone https://gitlab.com/WhatDothLife/TheSmallestHardTrees.git
+cd TheSmallestHardTrees
 cargo build --release
 ```
 The executable can be found in `./target/release/tripolys`.
@@ -67,7 +70,7 @@ You may need to modify the path to the data folder via the option `data_path`
 
 ### The smallest NP-hard trees (Section 7.1.1) 
 
-The trees can be found [here](file:data/20/kmm_deny.csv ). (TODO put the data there)
+The trees can be found [here](file:data/20/kmm_deny.csv). (TODO put the data there)
 To reproduce the result, run the following sequence of commands:
 
 ```
@@ -78,7 +81,7 @@ tripolys polymorphism -i 3-wnu_deny.csv -o kmm_deny.csv -c kmm -L -f deny
 ```
 
 We also found the smallest NP-hard triads: (TODO link edge lists here?)
-The triads can be found [here](file:data/20/triads/kmm_deny.csv ).
+The triads can be found [here](file:data/20/triads/kmm_deny.csv).
 
 ```
 tripolys generate -s 4 -e 22 --core --triad
@@ -110,7 +113,7 @@ and this is how you can test them:
 ### A tree not known to be in NL (Section 7.2.1)
 
 The trees not known to be in NL are
-[here](https://gitlab.com/WhatDothLife/tripolys_data/-/blob/master/16/majority_deny.csv)
+[here](https://github.com/WhatDothLife/HardTreesData/16/majority_deny.csv)
 and this is how you can test them:
 
 ```
@@ -134,7 +137,7 @@ tripolys polymorphism -g 1011000,1001111,010111 -c kmm -I
 tripolys polymorphism -g k3 -c 3-wnu -I
 ```
 ```
-tripolys homomorphism -f graph -t t3
+tripolys homomorphism -f graph.csv -t t3
 ```
 ```
 tripolys homomorphism -f p5 -t c2
