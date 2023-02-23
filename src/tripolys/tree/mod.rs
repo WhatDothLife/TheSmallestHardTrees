@@ -3,10 +3,10 @@
 mod generate;
 mod tree;
 
-pub use tree::Tree;
 pub use generate::*;
+pub use tree::Tree;
 
-use crate::{graph::traits::Digraph, csp::Problem};
+use crate::{csp::Problem, graph::traits::Digraph};
 
 /// Determines if the given `tree` is a core tree.
 ///
