@@ -16,7 +16,7 @@ use tripolys::algebra::{Condition, MetaProblem};
 
 use crate::{parse_graph, print_stats, CmdResult};
 
-const AVAILABLE_CONDITIONS: [&str; 9] = [
+const AVAILABLE_CONDITIONS: [&str; 10] = [
     "majority    majority",
     "k-nu        k-ary near-unamity",
     "k-wnu       k-ary weak near-unamity",
@@ -25,6 +25,7 @@ const AVAILABLE_CONDITIONS: [&str; 9] = [
     "n-kk        Kearnes-Kiss chain of length n",
     "n-hmck      Hobby-McKenzie chain of length n",
     "n-hm        Hagemann-Mitschke chain of length n",
+    "n-ts        Totally symmetric of arity n",
     "siggers     Siggers (consider testing for kmm, it is faster)",
 ];
 

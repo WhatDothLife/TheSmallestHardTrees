@@ -30,12 +30,13 @@ use crate::graph::AdjList;
 pub fn is_balanced<G>(g: &G) -> bool
 where
     G: Digraph,
+    G::Vertex: Debug,
 {
     let h: AdjList<_> = directed_path(g.edge_count());
     Problem::new(g, h).solution_exists()
 }
 
-pub fn levels<G>(g: &G) -> Option<Vec<usize>>
+pub fn levels<G>(g: &G) -> Option<HashMap<G::Vertex, usize>>
 where
     G: Digraph,
 {
@@ -44,7 +45,14 @@ where
         let mut problem = Problem::new(g, h);
 
         if let Some(sol) = problem.solve_first() {
-            return Some(sol.into_iter().collect());
+            let map: HashMap<_, _> = g
+                .vertices()
+                .map(|v| {
+                    let level = sol.value(&v);
+                    (v, level)
+                })
+                .collect();
+            return Some(map);
         }
     }
     None
@@ -176,7 +184,7 @@ fn indicator_graph(
     let levels = if level_wise {
         levels(template).ok_or(Error::Unbalanced)?
     } else {
-        vec![]
+        HashMap::new()
     };
 
     let mut indicator: AdjList<_> = arities(condition)
@@ -188,7 +196,7 @@ fn indicator_graph(
                 .kproduct(k)
                 .map(move |(u, v)| ((i, u), (i, v)))
         })
-        .filter(|((_, u), _)| !level_wise || u.iter().map(|v| levels[*v]).all_equal())
+        .filter(|((_, u), _)| !level_wise || u.iter().map(|v| levels.get(v).unwrap()).all_equal())
         .collect();
 
     for class in eq_classes(condition, &template.vertices().collect_vec()) {
@@ -243,6 +251,7 @@ pub enum Condition {
     /// - p<sub>i</sub>(x,x,y) = p<sub>i+1</sub>(x,y,y) for all i ∈ {1,…,n−1}
     /// - p<sub>n</sub>(x,x,y) = y.
     HagemannMitschke(usize),
+    TotallySymmetric(usize),
 }
 
 impl FromStr for Condition {
@@ -263,6 +272,7 @@ impl FromStr for Condition {
                             "kk" => Ok(Condition::KearnesKiss(pr)),
                             "hmck" => Ok(Condition::HobbyMcKenzie(pr)),
                             "nn" => Ok(Condition::NoName(pr)),
+                            "ts" => Ok(Condition::TotallySymmetric(pr)),
                             &_ => Err("unknown Condition, cannot convert from str".to_owned()),
                         }
                     } else {
@@ -299,6 +309,7 @@ fn arities(condition: Condition) -> Vec<usize> {
         Condition::KearnesKiss(n) => vec![3; n],
         Condition::HobbyMcKenzie(n) => vec![3; n],
         Condition::HagemannMitschke(n) => vec![3; n],
+        Condition::TotallySymmetric(n) => vec![n],
     }
 }
 
@@ -541,6 +552,7 @@ fn eq_classes(condition: Condition, vertices: &[usize]) -> Partition<(usize, Vec
 
             partition
         }
+        Condition::TotallySymmetric(n) => ts_eq_classes(n, vertices),
     }
 }
 
@@ -581,6 +593,26 @@ fn nu_eq_class_helper(arity: usize, g: &[usize], weak: bool) -> Partition<(usize
         }
         if !weak {
             partition.push(vec.into_iter().flatten().collect_vec());
+        }
+    }
+
+    partition
+}
+
+fn ts_eq_classes(arity: usize, g: &[usize]) -> Vec<Vec<(usize, Vec<usize>)>> {
+    fn generate(k: usize, elements: Vec<usize>) -> Vec<(usize, Vec<usize>)> {
+        (0..k)
+            .map(|_| elements.clone())
+            .multi_cartesian_product()
+            .filter(|v| v.iter().unique().count() == elements.len())
+            .map(|v| (0, v))
+            .collect()
+    }
+    let mut partition = Vec::new();
+
+    for i in 2..=arity {
+        for c in g.iter().copied().combinations(i) {
+            partition.push(generate(arity, c));
         }
     }
 

@@ -107,19 +107,19 @@ where
     /// one solution: the extra work in solve all is the part needed to know
     /// that the solution is unique, in that case. This method can not say if
     /// the solution is unique or not.
-    pub fn solve_first(&mut self) -> Option<Vec<usize>> {
+    pub fn solve_first<'a>(&'a mut self) -> Option<Solution<'a, X, A>> {
         let mut config = SolveConfig::default();
         config.stop_at_first = true;
         let mut solution = None;
         self.solve(&mut config, |s| solution = Some(s));
         self.stats = Some(config.stats);
-        solution
+        solution.map(|v| Solution {
+            raw: v,
+            variable_indices: &self.variable_indices,
+            value_indices: &self.value_indices,
+        })
     }
 
-    /// Get all solutions to the sudoku problem
-    ///
-    /// The problem is unmodified after the end of this method, and could be solved
-    /// the same way again.
     pub fn solve_all(&mut self, out: impl FnMut(Vec<usize>)) {
         let mut config = SolveConfig::default();
         self.solve(&mut config, out);
@@ -145,5 +145,18 @@ where
             neighbors[v].push((u, v, dir));
         }
         neighbors
+    }
+}
+
+pub struct Solution<'a, X, A> {
+    raw: Vec<usize>,
+    variable_indices: &'a IndexSet<X>,
+    value_indices: &'a IndexSet<A>,
+}
+
+impl<'a, X: Hash + Eq + Clone, A: Clone> Solution<'a, X, A> {
+    pub fn value(&self, x: &X) -> A {
+        let index = self.variable_indices.get_index_of(x).unwrap();
+        self.value_indices[self.raw[index]].clone()
     }
 }
