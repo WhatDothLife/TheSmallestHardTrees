@@ -5,7 +5,7 @@ use rayon::prelude::*;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 use tripolys::csp::SolveStats;
-use tripolys::graph::formats::from_edge_list;
+use tripolys::graph::formats::{edge_list, from_edge_list};
 use tripolys::graph::AdjList;
 
 use std::path::Path;
@@ -159,7 +159,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
         lines.next();
     }
     let graphs: Vec<_> = lines
-        .map(|line| from_edge_list::<AdjList<usize>>(line))
+        .map(|line| from_edge_list::<AdjList<usize>>(line.split(';').next().unwrap()))
         .collect();
 
     let log = std::sync::Mutex::new(SearchLog::new());
@@ -173,7 +173,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
         if filter.map_or(true, |v| !(v ^ found)) {
             log.lock()
                 .unwrap()
-                .add(h.to_string(), found, problem.stats().unwrap());
+                .add(edge_list(h), found, problem.stats().unwrap());
         }
     });
     let tend = tstart.elapsed();

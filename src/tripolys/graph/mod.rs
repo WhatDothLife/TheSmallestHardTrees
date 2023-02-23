@@ -3,7 +3,6 @@
 mod adjlist;
 mod adjmatrix;
 pub mod classes;
-mod edgelist;
 pub mod formats;
 pub mod traits;
 

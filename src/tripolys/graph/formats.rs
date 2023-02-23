@@ -27,25 +27,6 @@ where
     Ok(())
 }
 
-/// Prints the graph in dot format.
-pub fn to_edgelist<G, W>(g: G, output: &mut W) -> Result<(), io::Error>
-where
-    G: Digraph,
-    W: io::Write,
-    G::Vertex: fmt::Display,
-{
-    let mut s = String::from("[");
-    for (i, (u, v)) in g.edges().enumerate() {
-        if i != 0 {
-            s.push(',');
-        }
-        s.push_str(&format!("({u},{v})"));
-    }
-    s.push(']');
-    output.write_all(s.as_bytes())?;
-
-    Ok(())
-}
 
 /// Prints the graph in csv format.
 pub fn to_csv<G, W>(g: G, output: &mut W) -> Result<(), io::Error>
@@ -159,3 +140,21 @@ impl std::fmt::Display for ParseTriadError {
 }
 
 impl std::error::Error for ParseTriadError {}
+
+
+pub fn edge_list<G>(g: G) -> String
+where
+    G::Vertex: std::fmt::Display,
+    G: Edges,
+{
+    let mut s = String::from("[");
+    for (i, (u, v)) in g.edges().enumerate() {
+        if i != 0 {
+            s.push(',');
+        }
+        s.push_str(&format!("({u},{v})"));
+    }
+    s.push(']');
+
+    s
+}

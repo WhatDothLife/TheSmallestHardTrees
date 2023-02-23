@@ -1,6 +1,5 @@
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
-use itertools::Itertools;
-use tripolys::graph::traits::Edges;
+use tripolys::graph::formats::edge_list;
 use tripolys::tree::*;
 
 use std::fs::{create_dir_all, File};
@@ -118,9 +117,3 @@ fn file_name(core: bool, triad: bool) -> &'static str {
     }
 }
 
-fn edge_list(tree: &Tree) -> String {
-    tree.edges()
-        .map(|(u, v)| format!("{u},{v}"))
-        .intersperse(",".to_string())
-        .collect()
-}
