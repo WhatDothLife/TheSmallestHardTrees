@@ -23,8 +23,8 @@ const AVAILABLE_CONDITIONS: [&str; 10] = [
     "kmm         Kearnes-Marković-McKenzie",
     "n-j         Jónsson chain of length n",
     "n-kk        Kearnes-Kiss chain of length n",
-    "n-hmck      Hobby-McKenzie chain of length n",
-    "n-hm        Hagemann-Mitschke chain of length n",
+    "n-homck     Hobby-McKenzie chain of length n",
+    "n-hami      Hagemann-Mitschke chain of length n",
     "n-ts        Totally symmetric of arity n",
     "siggers     Siggers (consider testing for kmm, it is faster)",
 ];
