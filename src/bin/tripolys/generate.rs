@@ -5,7 +5,6 @@ use tripolys::tree::*;
 use std::fs::{create_dir_all, File};
 use std::io::{BufWriter, Write};
 use std::path::PathBuf;
-use std::time::Instant;
 
 use crate::CmdResult;
 
@@ -59,20 +58,20 @@ pub fn cli() -> App<'static, 'static> {
 }
 
 pub fn command(args: &ArgMatches) -> CmdResult {
+    let no_write = args.is_present("no-write");
     let data_path = args.value_of("data_path").unwrap();
-    let path = PathBuf::from(data_path);
+    let data_path = PathBuf::from(data_path);
 
-    if !path.is_dir() {
-        return Err(format!("Directory {path:?} doesn't exist").into());
+    if !no_write && !data_path.is_dir() {
+        return Err(format!("Directory {data_path:?} doesn't exist").into());
     }
 
     let start = args.value_of("start").unwrap().parse::<usize>()?;
     let end = args.value_of("end").unwrap().parse::<usize>()?;
     let core = args.is_present("core");
     let triad = args.is_present("triad");
-    let no_write = args.is_present("no-write");
 
-    let mut config = TreeGenConfig { triad, core };
+    let config = Config { triad, core };
 
     let mut rooted_trees = vec![];
 
@@ -80,32 +79,40 @@ pub fn command(args: &ArgMatches) -> CmdResult {
         println!("> Vertices: {n}");
         println!("  > Generating trees...");
 
-        let tstart = Instant::now();
-        let trees = generate_trees(n, &mut rooted_trees, &mut config);
-        let tend = tstart.elapsed();
-        println!("    - total_time: {tend:?}");
-        println!("    - Generated trees: {:?}", trees.len());
+        let mut stats = Stats::default();
+        let trees = generate_trees(n, &mut rooted_trees, &config, &mut stats);
+
+        if let Some(num_ac_calls) = stats.num_ac_calls {
+            println!("    - {: <20} {:?}", "#ac calls:", num_ac_calls);
+        }
+        if let Some(time_ac_call) = stats.time_ac_call {
+            println!("    - {: <20} {:?}", "t(ac call):", time_ac_call);
+        }
+        println!("    - {: <20} {:?}", "#trees:", stats.num_trees);
+        println!("    - {: <20} {:?}", "t(total):", stats.time_total);
 
         if !no_write {
-            let dir_name = if n < 10 {
-                String::from("0") + &n.to_string()
-            } else {
-                n.to_string()
-            };
-
-            let dir = path.join(dir_name);
+            let dir = data_path.join(dir_name(n));
             create_dir_all(&dir)?;
+
             let file = File::create(dir.join(file_name(core, triad)))?;
             let mut writer = BufWriter::new(file);
 
             for tree in trees {
-                writer.write_all(edge_list(&tree).as_bytes())?;
-                writer.write_all(b"\n")?;
+                write_tree_to_file(&tree, &mut writer)?;
             }
         }
     }
 
     Ok(())
+}
+
+fn dir_name(n: usize) -> String {
+    if n < 10 {
+        String::from("0") + &n.to_string()
+    } else {
+        n.to_string()
+    }
 }
 
 fn file_name(core: bool, triad: bool) -> &'static str {
@@ -117,3 +124,8 @@ fn file_name(core: bool, triad: bool) -> &'static str {
     }
 }
 
+fn write_tree_to_file<W: Write>(tree: &Tree, writer: &mut W) -> std::io::Result<()> {
+    writer.write_all(edge_list(tree).as_bytes())?;
+    writer.write_all(b"\n")?;
+    Ok(())
+}

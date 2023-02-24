@@ -42,24 +42,24 @@ fn split_into_sums(n: usize, k: usize) -> Vec<Vec<usize>> {
 
 /// Configuration for tree generation algorithm.
 #[derive(Clone, Debug, Default)]
-pub struct TreeGenConfig {
+pub struct Config {
     /// Only generate triads
     pub triad: bool,
     /// Only generate cores
     pub core: bool,
 }
 
-/// Statistics from the execution of tree generation algorithm.
+/// Statistics from the execution of the algorithm
 #[derive(Clone, Debug, Default)]
-pub struct TreeGenStats {
-    /// Time for rooted core checks
-    pub rcc_time: Duration,
-    /// Number of generated rooted trees
-    pub num_rcc: usize,
-    /// Time for core checks
-    pub cc_time: Duration,
-    /// Number of generated trees
-    pub num_cc: usize,
+pub struct Stats {
+    /// Number of generated (core) trees
+    pub num_trees: u32,
+    /// Number of AC calls
+    pub num_ac_calls: Option<u32>,
+    /// Time per AC call (average)
+    pub time_ac_call: Option<Duration>,
+    /// Time to generate the trees
+    pub time_total: Duration,
 }
 
 /// Returns all unique sets of `k` children whose number of nodes sum up to `n`.
@@ -74,71 +74,6 @@ fn collect_children(m: usize, k: usize, rooted_trees: &[Vec<Arc<Tree>>]) -> Vec<
         })
         .filter(|vec| vec.is_sorted()) // excludes permutations
         .collect()
-}
-
-fn generate_rooted_trees(
-    n: usize,
-    rooted_trees: &mut [Vec<Arc<Tree>>],
-    config: &mut TreeGenConfig,
-) -> Vec<Tree> {
-    if n == 0 {
-        return vec![];
-    }
-    if n == 1 {
-        return vec![Tree::leaf()];
-    }
-
-    let mut trees = trees(n, rooted_trees);
-
-    if config.triad {
-        trees = trees
-            .into_par_iter()
-            .filter(|child| child.is_rooted_path())
-            .collect();
-    }
-
-    if config.core {
-        trees = trees
-            .into_par_iter()
-            .filter(|child| is_rooted_core_tree(child, 0))
-            .collect();
-    }
-    trees
-}
-
-pub fn generate_trees(
-    n: usize,
-    rooted_trees: &mut Vec<Vec<Arc<Tree>>>,
-    config: &mut TreeGenConfig,
-) -> Vec<Tree> {
-    if n == 0 {
-        return vec![];
-    }
-    if n == 1 {
-        return vec![Tree::leaf()];
-    }
-
-    for i in rooted_trees.len()..n {
-        let trees = generate_rooted_trees(i, rooted_trees, config)
-            .into_iter()
-            .map(Arc::new)
-            .collect();
-
-        rooted_trees.push(trees);
-    }
-    let mut trees = if config.triad {
-        generate_triads(n, rooted_trees)
-    } else {
-        let centered = generate_centered_trees(n, rooted_trees);
-        let bicentered = generate_bicentered_trees(n, rooted_trees);
-        centered.into_iter().chain(bicentered).collect()
-    };
-
-    if config.core {
-        trees = trees.into_par_iter().filter(is_core_tree).collect();
-    }
-
-    trees
 }
 
 fn connect(children: Vec<Arc<Tree>>) -> Vec<Tree> {
@@ -199,4 +134,94 @@ fn generate_bicentered_trees(n: usize, rooted_trees: &[Vec<Arc<Tree>>]) -> Vec<T
         .filter(|c| c[0].height == c[1].height)
         .flat_map(|c| connect(c[0].clone(), c[1].clone()))
         .collect()
+}
+
+fn generate_rooted_trees(
+    n: usize,
+    rooted_trees: &mut [Vec<Arc<Tree>>],
+    config: &Config,
+) -> Vec<Tree> {
+    if n == 0 {
+        return vec![];
+    }
+    if n == 1 {
+        return vec![Tree::leaf()];
+    }
+
+    let mut trees = trees(n, rooted_trees);
+
+    if config.triad {
+        trees = trees
+            .into_par_iter()
+            .filter(|child| child.is_rooted_path())
+            .collect();
+    }
+
+    if config.core {
+        trees = trees
+            .into_par_iter()
+            .filter(|child| is_rooted_core_tree(child, 0))
+            .collect();
+    }
+    trees
+}
+
+pub fn generate_trees(
+    n: usize,
+    rooted_trees: &mut Vec<Vec<Arc<Tree>>>,
+    config: &Config,
+    stats: &mut Stats,
+) -> Vec<Tree> {
+    if n == 0 {
+        return vec![];
+    }
+    if n == 1 {
+        return vec![Tree::leaf()];
+    }
+
+    for i in rooted_trees.len()..n {
+        let i_rooted_trees = generate_rooted_trees(i, rooted_trees, config)
+            .into_iter()
+            .map(Arc::new)
+            .collect();
+
+        rooted_trees.push(i_rooted_trees);
+    }
+
+    let t_start = std::time::Instant::now();
+    let mut trees = if config.triad {
+        generate_triads(n, rooted_trees)
+    } else {
+        let centered = generate_centered_trees(n, rooted_trees);
+        let bicentered = generate_bicentered_trees(n, rooted_trees);
+        centered.into_iter().chain(bicentered).collect()
+    };
+
+    if config.core {
+        stats.num_ac_calls = Some(trees.len() as u32);
+
+        let (core_trees, times): (Vec<_>, Vec<_>) = trees
+            .into_par_iter()
+            .filter_map(|tree| {
+                let t_start = std::time::Instant::now();
+                let is_core_tree = is_core_tree(&tree);
+                let t_end = t_start.elapsed();
+
+                if is_core_tree {
+                    Some((tree, t_end))
+                } else {
+                    None
+                }
+            })
+            .unzip();
+
+        let sum_ac_call: Duration = times.iter().sum();
+        stats.time_ac_call = Some(sum_ac_call / times.len() as u32);
+        trees = core_trees;
+    }
+    let t_end = t_start.elapsed();
+    stats.time_total = t_end;
+    stats.num_trees = trees.len() as u32;
+
+    trees
 }
