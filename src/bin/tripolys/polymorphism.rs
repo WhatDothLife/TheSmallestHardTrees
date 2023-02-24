@@ -8,9 +8,7 @@ use tripolys::csp::SolveStats;
 use tripolys::graph::formats::{edge_list, from_edge_list};
 use tripolys::graph::AdjList;
 
-use std::path::Path;
 use std::str::FromStr;
-use std::time::Duration;
 
 use tripolys::algebra::{Condition, MetaProblem};
 
@@ -50,6 +48,11 @@ pub fn cli() -> App<'static, 'static> {
                 .short("l")
                 .long("list")
                 .help("List available conditions"),
+        )
+        .arg(
+            Arg::with_name("no-stats")
+                .long("no-stats")
+                .help("Prevent the program from recording statistics"),
         )
         .arg(
             Arg::with_name("condition")
@@ -121,6 +124,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
     let conservative = args.is_present("conservative");
     let idempotent = args.is_present("idempotent");
     let level_wise = args.is_present("level-wise");
+    let no_stats = args.is_present("no-stats");
 
     let polymorphism = MetaProblem::new(condition)
         .conservative(conservative)
@@ -145,41 +149,60 @@ pub fn command(args: &ArgMatches) -> CmdResult {
             println!("{}", "  ! Doesn't exist\n".to_string().red());
         };
 
-        print_stats(problem.stats().unwrap());
+        if !no_stats {
+            print_stats(problem.stats().unwrap());
+        }
 
         return Ok(());
     }
 
-    let input_path = args.value_of("input").unwrap();
-    let output_path = args.value_of("output").unwrap();
-    let content = std::fs::read_to_string(input_path)?;
+    let input = args.value_of("input").unwrap();
+    let output = args.value_of("output").unwrap();
+    let content = std::fs::read_to_string(input)?;
     let mut lines = content.lines();
 
-    if input_path.ends_with("csv") {
+    if input.ends_with("csv") {
         lines.next();
     }
-    let graphs: Vec<_> = lines
-        .map(|line| from_edge_list::<AdjList<usize>>(line.split(';').next().unwrap()))
+    let graphs: Vec<AdjList<usize>> = lines
+        .map(|line| from_edge_list(line.split(';').next().unwrap()))
         .collect();
 
-    let log = std::sync::Mutex::new(SearchLog::new());
     println!("  > Checking for polymorphisms...",);
-    let tstart = std::time::Instant::now();
+    let t_start = std::time::Instant::now();
 
-    graphs.into_par_iter().for_each(|h| {
-        let mut problem = polymorphism.problem(&h).unwrap();
-        let found = problem.solution_exists();
+    let results: Vec<Record> = graphs
+        .into_par_iter()
+        .map(|h| {
+            let mut problem = polymorphism.problem(&h).unwrap();
+            let found = problem.solution_exists();
+            let graph = edge_list(h);
 
-        if filter.map_or(true, |v| !(v ^ found)) {
-            log.lock()
-                .unwrap()
-                .add(edge_list(h), found, problem.stats().unwrap());
-        }
-    });
-    let tend = tstart.elapsed();
-    println!("    - total_time: {tend:?}");
+            Record {
+                graph,
+                found,
+                stats: if !no_stats {
+                    Some(problem.stats().unwrap())
+                } else {
+                    None
+                },
+            }
+        })
+        .filter(|record| !filter.is_some_and(|x| x ^ record.found))
+        .collect();
+
+    let t_end = t_start.elapsed();
+    println!("    - total_time: {t_end:?}");
     println!("  > Writing results...",);
-    log.lock().unwrap().write_csv(&output_path)?;
+
+    let mut wtr = WriterBuilder::new()
+        .has_headers(true)
+        .delimiter(b';')
+        .from_path(output)?;
+
+    for record in results {
+        wtr.serialize(record)?;
+    }
 
     Ok(())
 }
@@ -187,18 +210,9 @@ pub fn command(args: &ArgMatches) -> CmdResult {
 /// A struct which allows to store recorded data during the polymorphism search.
 #[derive(Debug, Default)]
 struct Record {
-    /// String representation of the inspected tree
     pub graph: String,
-    /// Whether the polymorphism was found
     pub found: bool,
-    /// Number of times the search-algorithm backtracked
-    pub backtracks: u32,
-    /// Time it took for the initial run of arc-consistency
-    pub ac3_time: Duration,
-    /// Time it took for the backtracking-search
-    pub mac3_time: Duration,
-    /// Total sum of ac_time and search_time
-    pub total_time: Duration,
+    pub stats: Option<SolveStats>,
 }
 
 impl Serialize for Record {
@@ -206,46 +220,21 @@ impl Serialize for Record {
     where
         S: Serializer,
     {
-        let mut state = serializer.serialize_struct("Record", 6)?;
-        state.serialize_field("tree", &self.graph)?;
+        let mut state = serializer.serialize_struct("Record", 3)?;
+
+        state.serialize_field("graph", &self.graph)?;
         state.serialize_field("found", &self.found)?;
-        state.serialize_field("backtracks", &self.backtracks)?;
-        state.serialize_field("ac3_time", &format!("{:?}", self.ac3_time))?;
-        state.serialize_field("mac3_time", &format!("{:?}", self.mac3_time))?;
-        state.serialize_field("total_time", &format!("{:?}", self.total_time))?;
-        state.end()
-    }
-}
 
-/// Stores stats and prints them to csv.
-#[derive(Debug, Default)]
-pub struct SearchLog(Vec<Record>);
-
-impl SearchLog {
-    pub fn new() -> SearchLog {
-        SearchLog::default()
-    }
-
-    pub fn add(&mut self, graph: String, found: bool, stats: SolveStats) {
-        let record = Record {
-            graph,
-            found,
-            backtracks: stats.backtracks,
-            ac3_time: stats.ac3_time,
-            mac3_time: stats.mac3_time,
-            total_time: stats.ac3_time + stats.mac3_time,
-        };
-        self.0.push(record);
-    }
-
-    pub fn write_csv<P: AsRef<Path>>(&self, path: P) -> Result<(), std::io::Error> {
-        let mut wtr = WriterBuilder::new()
-            .has_headers(true)
-            .delimiter(b';')
-            .from_path(&path)?;
-        for record in &self.0 {
-            wtr.serialize(record)?;
+        if let Some(stats) = self.stats {
+            state.serialize_field("backtracks", &stats.backtracks)?;
+            state.serialize_field("ac3_time", &format!("{:?}", stats.ac3_time))?;
+            state.serialize_field("mac3_time", &format!("{:?}", stats.mac3_time))?;
+            state.serialize_field(
+                "total_time",
+                &format!("{:?}", stats.mac3_time + stats.ac3_time),
+            )?;
         }
-        Ok(())
+
+        state.end()
     }
 }
