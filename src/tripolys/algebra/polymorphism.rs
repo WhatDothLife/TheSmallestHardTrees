@@ -30,7 +30,6 @@ use crate::graph::AdjList;
 pub fn is_balanced<G>(g: &G) -> bool
 where
     G: Digraph,
-    G::Vertex: Debug,
 {
     let h: AdjList<_> = directed_path(g.edge_count());
     Problem::new(g, h).solution_exists()
