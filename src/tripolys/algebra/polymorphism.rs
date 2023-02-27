@@ -19,6 +19,7 @@ use crate::graph::AdjList;
 /// # Examples
 ///
 /// ```
+/// use tripolys::graph::traits::Build;
 /// use tripolys::graph::AdjList;
 /// use tripolys::algebra::is_balanced;
 ///
@@ -35,11 +36,26 @@ where
     Problem::new(g, h).solution_exists()
 }
 
+/// Computes the levels of a balanced digraph `g`,
+///
+/// Returns a `HashMap` where the keys are the vertices of `g` and the values
+/// are their levels, or `None` if `g` is not balanced.
+///
+/// # Examples
+///
+/// ```
+/// use tripolys::graph::traits::Build;
+/// use tripolys::graph::AdjList;
+/// use tripolys::algebra::levels;
+///
+/// let mut g = AdjList::from_edges([("a", "b"), ("b", "c"), ("c", "d"), ("b", "e")]);
+/// assert_eq!(levels(&g), Some([("a", 0), ("b", 1), ("c", 2), ("d", 3), ("e", 2)].into_iter().collect()));
+/// ```
 pub fn levels<G>(g: &G) -> Option<HashMap<G::Vertex, usize>>
 where
     G: Digraph,
 {
-    for k in 0..g.edge_count() {
+    for k in 0..g.vertex_count() {
         let h: AdjList<_> = directed_path(k + 1);
         let mut problem = Problem::new(g, h);
 

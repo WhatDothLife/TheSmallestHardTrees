@@ -29,32 +29,35 @@ impl<V> Default for Neighbors<V> {
 /// allow non-Copy types like `Vec` because it represents a tuple of any arity
 /// which we need to build the indicator graph of a metaproblem. It also
 /// implements fast contraction of vertices.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct AdjList<V> {
     lists: IndexMap<V, Neighbors<V>>,
 }
 
-impl<V: Hash + Clone + Eq> AdjList<V> {
-    pub fn new() -> AdjList<V> {
-        AdjList {
-            lists: IndexMap::new(),
+impl<V> Default for AdjList<V> {
+    fn default() -> Self {
+        Self {
+            lists: Default::default(),
         }
     }
+}
 
-    pub fn add_edge(&mut self, u: V, v: V) {
+impl<V: Hash + Clone + Eq> AdjList<V> {
+    pub fn new() -> AdjList<V> {
+        Self::default()
+    }
+
+    fn add_vertex(&mut self, v: V) {
+        self.lists.entry(v).or_default();
+    }
+
+    fn add_edge(&mut self, u: V, v: V) {
         self.lists
             .entry(u.clone())
             .or_default()
             .outgoing
             .insert(v.clone());
         self.lists.entry(v).or_default().incoming.insert(u);
-    }
-
-    pub fn from_edges<I>(edges: I) -> Self
-    where
-        I: IntoIterator<Item = (V, V)>,
-    {
-        Self::from_iter(edges)
     }
 }
 
@@ -137,13 +140,7 @@ impl<V: Hash + Clone + Eq> Contract for AdjList<V> {
 
 impl<V: Hash + Clone + Eq> FromIterator<(V, V)> for AdjList<V> {
     fn from_iter<T: IntoIterator<Item = (V, V)>>(iter: T) -> Self {
-        let mut graph = Self::new();
-
-        for (u, v) in iter {
-            graph.add_edge(u, v);
-        }
-
-        graph
+        Self::from_edges(iter)
     }
 }
 
@@ -199,6 +196,22 @@ impl<V: Hash + Clone + Eq + std::fmt::Display> ToString for AdjList<V> {
         }
         s.push(']');
         s
+    }
+}
+
+impl<V: Eq + Hash + Clone> Build for AdjList<V> {
+    fn with_capacities(nvertices: usize, _nedges: usize) -> Self {
+        Self {
+            lists: IndexMap::with_capacity(nvertices),
+        }
+    }
+
+    fn add_vertex(&mut self, v: Self::Vertex) {
+        self.add_vertex(v)
+    }
+
+    fn add_edge(&mut self, u: Self::Vertex, v: Self::Vertex) {
+        self.add_edge(u, v)
     }
 }
 

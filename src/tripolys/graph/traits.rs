@@ -9,12 +9,25 @@ pub trait VertexType {
 }
 
 /// A trait for building digraphs.
-pub trait Build: VertexType {
+pub trait Build: VertexType + Default {
+    fn with_capacities(nvertices: usize, nedges: usize) -> Self;
+
     /// Adds a new vertex to the graph.
     fn add_vertex(&mut self, v: Self::Vertex);
 
     /// Adds a new edge to the graph, connecting vertices `u` and `v`.
     fn add_edge(&mut self, u: Self::Vertex, v: Self::Vertex);
+
+    fn from_edges<I>(edges: I) -> Self
+    where
+        I: IntoIterator<Item = (Self::Vertex, Self::Vertex)>,
+    {
+        let mut g = Self::default();
+        for (u, v) in edges {
+            g.add_edge(u, v);
+        }
+        g
+    }
 }
 
 /// Access the vertices of a digraph.
@@ -59,21 +72,21 @@ pub trait HasEdge: VertexType {
 
 /// Contract vertices in a digraph.
 pub trait Contract: VertexType {
-    /// Contracts the vertices `u` and `v` in the graph. Returns true if the contraction was successful.
+    /// Contracts the vertex `u` with vertex `v`. Returns true if the
+    /// contraction was successful.
     fn contract_vertex(&mut self, u: Self::Vertex, v: Self::Vertex) -> bool;
 
-    /// Contracts the vertices in `vertices` in the graph.
-    fn contract_vertices<I>(&mut self, vertices: I)
+    /// Contracts the vertices in `vertices`.
+    fn contract_vertices<I>(&mut self, vertices: I) -> bool
     where
         I: IntoIterator<Item = Self::Vertex>,
     {
         let mut iter = vertices.into_iter();
 
         if let Some(u) = iter.next() {
-            for v in iter {
-                self.contract_vertex(u.clone(), v);
-            }
+            return iter.map(|v| self.contract_vertex(u.clone(), v)).all(|x| x);
         }
+        true
     }
 }
 

@@ -9,7 +9,7 @@ use super::traits::{VertexType, HasEdge};
 ///
 /// It is used in the backtracking algorithm, because of frequent edge-lookup
 /// which it implements in O(1).
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct AdjMatrix {
     adjacencies: BitVec,
     num_vertices: usize,
@@ -54,7 +54,7 @@ impl VertexType for AdjMatrix {
 impl HasEdge for AdjMatrix {
     fn has_edge(&self, u: usize, v: usize) -> bool {
         if u >= self.num_vertices || v >= self.num_vertices {
-            panic!("Vertices out of bounds");
+            return false;
         }
 
         *self.adjacencies.get(u * self.num_vertices + v).unwrap()
@@ -91,14 +91,5 @@ mod tests {
         assert_eq!(adj_matrix.has_edge(1, 2), true);
         assert_eq!(adj_matrix.has_edge(2, 3), true);
         assert_eq!(adj_matrix.has_edge(3, 0), false);
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_has_edge_out_of_bounds() {
-        let edges = vec![(0, 1), (1, 2), (2, 3)];
-        let adj_matrix = AdjMatrix::from_edges(edges);
-
-        adj_matrix.has_edge(4, 5);
     }
 }

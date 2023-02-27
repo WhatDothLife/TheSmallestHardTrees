@@ -5,7 +5,8 @@ use rayon::prelude::*;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 use tripolys::csp::SolveStats;
-use tripolys::graph::formats::{edge_list, from_edge_list};
+// use tripolys::graph::formats::{edge_list, from_edge_list};
+use tripolys::graph::utils::{edge_list, parse_edge_list};
 use tripolys::graph::AdjList;
 
 use std::str::FromStr;
@@ -164,9 +165,9 @@ pub fn command(args: &ArgMatches) -> CmdResult {
     if input.ends_with("csv") {
         lines.next();
     }
-    let graphs: Vec<AdjList<usize>> = lines
-        .map(|line| from_edge_list(line.split(';').next().unwrap()))
-        .collect();
+    let graphs = lines
+        .map(|line| parse_edge_list(line.split(';').next().unwrap()))
+        .collect::<Result<Vec<AdjList<usize>>, _>>()?;
 
     println!("  > Checking for polymorphisms...",);
     let t_start = std::time::Instant::now();
