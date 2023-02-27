@@ -39,34 +39,3 @@ where
 
     Ok(())
 }
-
-// /// Reads a graph from csv format.
-// pub fn from_csv<G, R>(input: R) -> Result<G, CsvError>
-// where
-//     G: Build,
-//     R: io::Read,
-//     G::Vertex: FromStr,
-// {
-//     let reader = io::BufReader::new(input);
-//     let mut g = G::default();
-
-//     for (i, line) in reader.lines().enumerate() {
-//         let line = line?;
-//         if let Some((v, w)) = line.split(&[',', ';', '|', ' ']).next_tuple() {
-//             g.add_edge(v.parse()?, w.parse()?);
-//         } else {
-//             return Err(CsvError::MissingSeparator(i + 1));
-//         }
-//     }
-//     Ok(g)
-// }
-
-// #[derive(Error, Debug)]
-// pub enum CsvError {
-//     #[error("Separator missing in line {0}")]
-//     MissingSeparator(usize),
-//     #[error("{0}")]
-//     Io(#[from] io::Error),
-//     #[error("{0}")]
-//     Parse(#[from] num::ParseIntError),
-// }
