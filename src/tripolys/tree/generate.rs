@@ -215,9 +215,8 @@ pub fn generate_trees(
             })
             .unzip();
 
-        let sum_ac_call: Duration = times.iter().sum();
         stats.time_ac_call = if times.len() != 0 {
-            Some(sum_ac_call / times.len() as u32)
+            Some(times.iter().sum::<Duration>() / times.len() as u32)
         } else {
             None
         };
