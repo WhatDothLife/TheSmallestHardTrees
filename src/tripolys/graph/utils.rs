@@ -1,10 +1,7 @@
-use std::str::FromStr;
-
+use crate::graph::traits::{Build, Edges};
 use itertools::Itertools;
-
-use crate::graph::traits::Edges;
-
-use super::traits::Build;
+use std::fmt::Debug;
+use std::str::FromStr;
 
 /// Parses a string representing an edge list into a graph.
 ///
@@ -39,7 +36,7 @@ where
 /// The edge list is in the format `[(u1,v1),(u2,v2),...]`.
 pub fn edge_list<G>(g: G) -> String
 where
-    G::Vertex: std::fmt::Debug,
+    G::Vertex: Debug,
     G: Edges,
 {
     let mut s = String::from("[");
