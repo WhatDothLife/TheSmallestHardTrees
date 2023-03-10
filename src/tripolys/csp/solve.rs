@@ -1,19 +1,11 @@
-use crate::graph::traits::HasEdge;
-use std::time::{Duration, Instant};
+use itertools::Itertools;
 
-use crate::graph::AdjMatrix;
+use std::{
+    ops::Neg,
+    time::{Duration, Instant},
+};
 
-use super::domain::Domain;
-
-type Value = usize;
-type Variable = usize;
-pub type Arc = (Variable, Variable, Direction);
-
-#[derive(Clone, Copy, Debug)]
-pub enum Direction {
-    Forward,
-    Backward,
-}
+use super::{domain::Domain, problem::*};
 
 // Macros to trace debug logging
 
@@ -31,65 +23,84 @@ macro_rules! trace {
     ($($t:tt)*) => { if_trace!(eprintln!($($t)*)) }
 }
 
-macro_rules! stat {
-    ($c:ident . $field:ident $($t:tt)*) => {
-        $c.stats.$field $($t)*;
-    }
+/// Statistics from the execution of the backtracking search.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Stats {
+    /// Number of consistency checks
+    pub ccks: u32,
+    /// Number of backtracks from dead ends
+    pub backtracks: u32,
+    /// Number of solutions emitted
+    pub solutions: u32,
+    /// Number of assignments
+    pub assignments: u32,
+    /// Duration of the arc-consistency preprocessing
+    pub ac3_time: Duration,
+    /// Duration of the backtracking
+    pub mac3_time: Duration,
 }
 
-fn debug_print(domains: &Vec<Domain<Value>>) {
-    for (i, d) in domains.iter().enumerate() {
-        println!("{:?} -> {:?}", i, d.iter().collect::<Vec<_>>());
+pub fn solve<C>(domains: &mut Vec<Domain<Value>>, constraints: &C, stats: &mut Stats) -> bool
+where
+    C: Constraints,
+{
+    trace!("  > Preprocessing with AC-3");
+    let t_start = Instant::now();
+    let ac = ac_3(domains, constraints, stats);
+    let t_end = t_start.elapsed();
+    stats.ac3_time = t_end;
+
+    if !ac {
+        return false;
     }
+
+    trace!("  > Solving with MAC-3");
+    let t_start = Instant::now();
+    let solve = solve_recursive(domains, constraints, stats);
+    let t_end = t_start.elapsed();
+    stats.mac3_time = t_end;
+    solve
 }
 
 enum Revision {
-    Modified,
     Unchanged,
+    Changed,
     Empty,
 }
 
-fn revise(
-    (x, y, dir): Arc,
+fn revise<C: Constraints>(
+    x: Var,
+    y: Var,
     domains: &mut Vec<Domain<Value>>,
-    template: &AdjMatrix,
-    config: &mut SolveConfig,
-    mut trail: Option<&mut Vec<Vec<Variable>>>,
+    constraints: &C,
+    mut trail: Option<&mut Vec<Var>>,
+    stats: &mut Stats,
 ) -> Revision {
-    let mut result = Revision::Unchanged;
+    let mut revision = Revision::Unchanged;
 
     for i in (0..domains[x].size()).rev() {
         let mut is_possible = false;
-        let ai = domains[x][i];
 
-        for &aj in &domains[y] {
-            stat!(config.ccks += 1);
-            match dir {
-                Direction::Forward => {
-                    if template.has_edge(ai, aj) {
-                        is_possible = true;
-                        break;
-                    }
-                }
-                Direction::Backward => {
-                    if template.has_edge(aj, ai) {
-                        is_possible = true;
-                        break;
-                    }
-                }
+        for &ay in domains[y].iter() {
+            let ax = domains[x][i];
+
+            stats.ccks += 1;
+            if constraints.check_arc((x, ax), (y, ay)) {
+                is_possible = true;
+                break;
             }
         }
 
         if !is_possible {
-            // If used for backtracking we save the state of the variable
             if let Some(ref mut trail) = trail {
                 if !domains[x].is_modified() {
-                    domains[x].push_state();
-                    trail.last_mut().unwrap().push(x);
+                    domains[x].save_state();
+                    trail.push(x);
                 }
             }
-            domains[x].remove(i);
-            result = Revision::Modified;
+
+            domains[x].swap_remove(i);
+            revision = Revision::Changed;
 
             if domains[x].is_empty() {
                 return Revision::Empty;
@@ -97,194 +108,107 @@ fn revise(
         }
     }
 
-    result
+    revision
 }
 
-pub fn mac3<I>(
+/// The MAC-3 algorithm due to Mackworth 1977.
+pub fn mac_3<C>(
+    x: Var,
     domains: &mut Vec<Domain<Value>>,
-    arcs: I,
-    neighbors: &Vec<Vec<Arc>>,
-    template: &AdjMatrix,
-    config: &mut SolveConfig,
-    trail: &mut Vec<Vec<Variable>>,
+    constraints: &C,
+    trail: &mut Vec<Var>,
+    stats: &mut Stats,
 ) -> bool
 where
-    I: IntoIterator<Item = Arc>,
+    C: Constraints,
 {
-    let mut work_list = Vec::from_iter(arcs);
+    let mut work_list: Vec<_> = Vec::from_iter(constraints.neighbors(x));
 
-    while let Some(arc) = work_list.pop() {
-        match revise(arc, domains, template, config, Some(trail)) {
-            Revision::Modified => {
-                work_list.extend(neighbors[arc.0].iter().copied());
-            }
-            Revision::Empty => {
-                return false;
-            }
+    while let Some((x, y)) = work_list.pop() {
+        match revise(x, y, domains, constraints, Some(trail), stats) {
             Revision::Unchanged => {}
+            Revision::Changed => work_list.extend(constraints.neighbors(x)),
+            Revision::Empty => return false,
         }
     }
     true
 }
 
-pub fn ac3<I>(
-    domains: &mut Vec<Domain<Value>>,
-    arcs: I,
-    neighbors: &Vec<Vec<Arc>>,
-    template: &AdjMatrix,
-    config: &mut SolveConfig,
-) -> bool
+/// The MAC-3 algorithm due to Mackworth 1977.
+pub fn ac_3<C>(domains: &mut Vec<Domain<Value>>, constraints: &C, stats: &mut Stats) -> bool
 where
-    I: IntoIterator<Item = Arc>,
+    C: Constraints,
 {
-    let mut work_list = Vec::from_iter(arcs);
+    let mut work_list: Vec<_> = Vec::from_iter(constraints.arcs());
 
-    while let Some(arc) = work_list.pop() {
-        match revise(arc, domains, template, config, None) {
-            Revision::Modified => {
-                work_list.extend(neighbors[arc.0].iter().copied());
-            }
-            Revision::Empty => {
-                return false;
-            }
+    while let Some((x, y)) = work_list.pop() {
+        match revise(x, y, domains, constraints, None, stats) {
             Revision::Unchanged => {}
+            Revision::Changed => work_list.extend(constraints.neighbors(x)),
+            Revision::Empty => return false,
         }
     }
     true
 }
 
-#[derive(Clone, Debug)]
-pub(crate) enum SolveError {
-    /// Used internally to stop after the first solution (if enabled)
-    RequestedStop,
-}
-
-/// Statistics from the execution of the backtracking search.
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SolveStats {
-    /// Number of consistency checks
-    pub ccks: u32,
-    /// Number of recursive calls
-    pub calls: u32,
-    /// Number of backtracks from dead ends
-    pub backtracks: u32,
-    /// Number of solutions emitted
-    pub solutions: u32,
-    /// Duration of the arc-consistency preprocessing
-    pub ac3_time: Duration,
-    /// Duration of the entire solving process
-    pub mac3_time: Duration,
-}
-
-/// Configuration for backtracking
-#[derive(Clone, Debug, Default)]
-pub struct SolveConfig {
-    /// If true, stop at first solution
-    pub stop_at_first: bool,
-    /// Statistics
-    pub stats: SolveStats,
-}
-
-pub fn solve<A>(
-    domains: &mut Vec<Domain<Value>>,
-    arcs: A,
-    neighbors: &Vec<Vec<Arc>>,
-    template: &AdjMatrix,
-    mut out: impl FnMut(Vec<Value>),
-    config: &mut SolveConfig,
-) where
-    A: IntoIterator<Item = Arc>,
-{
-    trace!("Backtracking start");
-    // if_trace!(self.domains.debug_print());
-
-    if_trace!("Preprocessing with AC-3");
-    let tstart = Instant::now();
-    let ac = ac3(domains, arcs, neighbors, template, config);
-    let tend = tstart.elapsed();
-    stat!(config.ac3_time = tend);
-
-    if_trace!(debug_print(domains));
-
-    let mut stack: Vec<_> = (0..domains.len()).collect();
-    let domain_sizes = domains.iter().map(|d| d.size()).collect::<Vec<_>>();
-    stack.sort_unstable_by(|a, b| domain_sizes[*b].cmp(&domain_sizes[*a]));
-
-    let mut trail = Vec::new();
-
-    if ac {
-        let tstart = Instant::now();
-        let _ = solve_recursive(
-            &mut stack, domains, neighbors, template, &mut out, config, &mut trail,
-        );
-        let tend = tstart.elapsed();
-        stat!(config.mac3_time = tend);
-    }
-}
-
-/// The solver runs through the whole search tree if not interrupted; the
-/// BTError status is used to short-circuit and exit as soon as possible if
-/// requested.
-fn solve_recursive<F>(
-    stack: &mut Vec<Variable>,
-    domains: &mut Vec<Domain<Value>>,
-    neighbors: &Vec<Vec<Arc>>,
-    template: &AdjMatrix,
-    out: &mut F,
-    config: &mut SolveConfig,
-    trail: &mut Vec<Vec<Variable>>,
-) -> Result<(), SolveError>
+fn solve_recursive<C>(domains: &mut Vec<Domain<Value>>, constraints: &C, stats: &mut Stats) -> bool
 where
-    F: FnMut(Vec<usize>),
+    C: Constraints,
 {
-    stat!(config.calls += 1);
+    let mut stack: Vec<Var> = (0..domains.len())
+        .sorted_by_key(|&x| (domains[x].size() as isize).neg())
+        .collect();
 
+    solve_recursive_inner(&mut stack, domains, constraints, stats)
+}
+
+fn solve_recursive_inner<C>(
+    stack: &mut Vec<Var>,
+    domains: &mut Vec<Domain<Value>>,
+    constraints: &C,
+    stats: &mut Stats,
+) -> bool
+where
+    C: Constraints,
+{
     if stack.is_empty() {
-        let solution = domains.iter().map(|d| d[0]).collect();
-        trace!("==> Valid solution: {:?}", solution);
-        stat!(config.solutions += 1);
-        out(solution);
-
-        if config.stop_at_first {
-            return Err(SolveError::RequestedStop);
-        }
+        return true;
     }
 
-    let mut status = Ok(());
+    let mut status = false;
     let x = stack.pop().unwrap();
     trace!("Selected variable = {}", x);
 
     for i in 0..domains[x].size() {
         trace!("Assignment: {} -> {}", x, domains[x][i]);
-
-        trail.push(vec![x]);
-        domains[x].push_state();
+        let mut trail = vec![x];
+        domains[x].save_state();
         domains[x].assign(i);
+        stats.assignments += 1;
 
-        if mac3(
-            domains,
-            neighbors[x].clone(),
-            neighbors,
-            template,
-            config,
-            trail,
-        ) {
+        if mac_3(x, domains, constraints, &mut trail, stats) {
             trace!("Propagation successful, recursing...");
             // Repeat the algorithm recursively on the reduced domains
-            status = solve_recursive(stack, domains, neighbors, template, out, config, trail);
+            status = solve_recursive_inner(stack, domains, constraints, stats);
         } else {
             trace!("Detected inconsistency, backtracking...");
-            stat!(config.backtracks += 1);
+            stats.backtracks += 1;
         }
-        for x in trail.pop().unwrap() {
-            domains[x].pop_state();
+        if status {
+            return true;
         }
-
-        if status.is_err() {
-            break;
+        // Backtrack
+        for x in trail {
+            domains[x].restore_state();
         }
     }
     stack.push(x);
 
     status
+}
+
+fn debug_print(domains: &Vec<Domain<Value>>) {
+    for (i, d) in domains.iter().enumerate() {
+        println!("{:?} -> {:?}", i, d.iter().collect::<Vec<_>>());
+    }
 }

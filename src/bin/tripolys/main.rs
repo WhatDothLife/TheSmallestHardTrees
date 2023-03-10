@@ -11,7 +11,7 @@ use std::fmt::Debug;
 
 use clap::{App, AppSettings};
 use colored::*;
-use tripolys::csp::SolveStats;
+use tripolys::csp::Stats;
 use tripolys::graph::traits::Build;
 use tripolys::graph::utils::parse_edge_list;
 use tripolys::graph::{classes::*, traits::VertexType};
@@ -122,11 +122,12 @@ impl std::fmt::Display for ClassNotFound {
 impl std::error::Error for ClassNotFound {}
 
 #[rustfmt::skip]
-fn print_stats(stats: SolveStats) {
+fn print_stats(stats: Stats) {
     println!("Statistics:");
     println!("- {: <20} {:?}", "AC3 time:", stats.ac3_time);
     println!("- {: <20} {:?}", "MAC3 time:", stats.mac3_time);
     println!("- {: <20} {:?}", "Total time:", stats.mac3_time + stats.ac3_time);
     println!("- {: <20} {:?}", "#backtracks:", stats.backtracks);
+    println!("- {: <20} {:?}", "#assignments:", stats.assignments);
     println!("- {: <20} {:?}", "#consistency checks:", stats.ccks);
 }

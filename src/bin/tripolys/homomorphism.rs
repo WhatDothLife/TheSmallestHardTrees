@@ -59,7 +59,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
         let precoloring = parse_precoloring(&content)?;
 
         for (v, d) in precoloring {
-            problem.set_value(v, d);
+            problem.precolor(v, d);
         }
     }
 
@@ -68,7 +68,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
         let lists = parse_lists(&content)?;
 
         for (v, d) in lists.into_iter().enumerate() {
-            problem.set_domain(v, d);
+            problem.set_list(v, d);
         }
     }
 
@@ -80,7 +80,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
         println!("{}", "  ! Doesn't exist\n".to_string().red());
     };
 
-    print_stats(problem.stats().unwrap());
+    print_stats(problem.stats());
 
     Ok(())
 }

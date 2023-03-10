@@ -4,7 +4,7 @@ use csv::WriterBuilder;
 use rayon::prelude::*;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
-use tripolys::csp::SolveStats;
+use tripolys::csp::Stats;
 // use tripolys::graph::formats::{edge_list, from_edge_list};
 use tripolys::graph::utils::{edge_list, parse_edge_list};
 use tripolys::graph::AdjList;
@@ -151,7 +151,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
         };
 
         if !no_stats {
-            print_stats(problem.stats().unwrap());
+            print_stats(problem.stats());
         }
 
         return Ok(());
@@ -183,7 +183,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
                 graph,
                 found,
                 stats: if !no_stats {
-                    Some(problem.stats().unwrap())
+                    Some(problem.stats())
                 } else {
                     None
                 },
@@ -213,7 +213,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
 struct Record {
     pub graph: String,
     pub found: bool,
-    pub stats: Option<SolveStats>,
+    pub stats: Option<Stats>,
 }
 
 impl Serialize for Record {
