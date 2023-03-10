@@ -3,7 +3,7 @@ use std::cmp;
 use bitvec::bitvec;
 use bitvec::vec::BitVec;
 
-use super::traits::{VertexType, HasEdge};
+use super::traits::VertexType;
 
 /// AdjMatrix is a graph using a matrix representation.
 ///
@@ -45,20 +45,18 @@ impl AdjMatrix {
             num_vertices,
         }
     }
-}
 
-impl VertexType for AdjMatrix {
-    type Vertex = usize;
-}
-
-impl HasEdge for AdjMatrix {
-    fn has_edge(&self, u: usize, v: usize) -> bool {
+    pub fn has_edge(&self, u: usize, v: usize) -> bool {
         if u >= self.num_vertices || v >= self.num_vertices {
             return false;
         }
 
         *self.adjacencies.get(u * self.num_vertices + v).unwrap()
     }
+}
+
+impl VertexType for AdjMatrix {
+    type Vertex = usize;
 }
 
 impl FromIterator<(usize, usize)> for AdjMatrix {

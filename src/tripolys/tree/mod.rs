@@ -35,12 +35,7 @@ where
     let mut problem = Problem::new(tree, tree);
     problem.make_arc_consistent();
 
-    for d in problem.domains() {
-        if d.size() != 1 {
-            return false;
-        }
-    }
-    true
+    problem.all_singleton()
 }
 
 /// Determines if the given `tree` is a rooted core tree with the specified `root` vertex.
@@ -72,13 +67,8 @@ where
     T: Digraph,
 {
     let mut problem = Problem::new(tree, tree);
-    problem.set_value(root.clone(), root);
+    problem.precolor(root.clone(), root);
     problem.make_arc_consistent();
 
-    for d in problem.domains() {
-        if d.size() != 1 {
-            return false;
-        }
-    }
-    true
+    problem.all_singleton()
 }

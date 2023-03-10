@@ -59,12 +59,12 @@ where
         let h: AdjList<_> = directed_path(k + 1);
         let mut problem = Problem::new(g, h);
 
-        if let Some(sol) = problem.solve_first() {
+        if let Some(sol) = problem.solve() {
             let map: HashMap<_, _> = g
                 .vertices()
                 .map(|v| {
                     let level = sol.value(&v);
-                    (v, level)
+                    (v, *level)
                 })
                 .collect();
             return Some(map);
@@ -158,17 +158,17 @@ impl MetaProblem {
 
         for v_ind in indicator.vertices() {
             if let Some(u) = precolor(self.condition, &v_ind) {
-                problem.set_value(v_ind, u);
+                problem.precolor(v_ind, u);
             } else if self.conservative {
-                problem.set_domain(v_ind.clone(), v_ind.1.clone());
+                problem.set_list(v_ind.clone(), v_ind.1.clone());
             } else if self.idempotent {
                 if v_ind.1.iter().all_equal() {
-                    problem.set_value(v_ind.clone(), v_ind.1[0]);
+                    problem.precolor(v_ind.clone(), v_ind.1[0]);
                 } else {
-                    problem.set_domain(v_ind, template.vertices());
+                    problem.set_list(v_ind, template.vertices());
                 }
             } else {
-                problem.set_domain(v_ind, template.vertices());
+                problem.set_list(v_ind, template.vertices());
             }
         }
 
