@@ -7,9 +7,10 @@ and core orientations of trees.
 
 This repository contains companion code for the following paper. The results  be
 found in a separate data repository over
-[here](https://github.com/WhatDothLife/HardTreesData). If you use this code,
-please cite the paper. You can use the bibtex reference below. (TODO update once
-published)
+[here](https://github.com/WhatDothLife/HardTreesData). The python code can be
+found [here](https://github.com/Zerwas/TheSmallestHardTreesPython).  If you use
+this code, please cite the paper. You can use the bibtex reference below. (TODO
+update once published)
 
 _M. Bodirsky, J. Bulín, F. Starke, and M. Wernthaler. The smallest hard trees, arXiv:2205.07528 [math.RA] (May 2022)_
 https://doi.org/10.48550/arXiv.2205.07528
