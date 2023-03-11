@@ -5,9 +5,9 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::str::FromStr;
 
-use super::AdjList;
 use super::classes::directed_path;
 use super::traits::Digraph;
+use super::AdjList;
 
 /// Parses a string representing an edge list into a graph.
 ///
@@ -107,15 +107,9 @@ where
         let h: AdjList<_> = directed_path(k + 1);
         let mut problem = Problem::new(g, h);
 
-        if let Some(sol) = problem.solve_first() {
-            let map: HashMap<_, _> = g
-                .vertices()
-                .map(|v| {
-                    let level = sol.value(&v);
-                    (v, level)
-                })
-                .collect();
-            return Some(map);
+        if let Some(sol) = problem.solve() {
+            let levels: HashMap<_, _> = g.vertices().map(|v| (v.clone(), *sol.value(&v))).collect();
+            return Some(levels);
         }
     }
     None
