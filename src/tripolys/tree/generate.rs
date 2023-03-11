@@ -96,6 +96,8 @@ fn trees(n: usize, rooted_trees: &[Vec<Arc<Tree>>]) -> Vec<Tree> {
         .collect()
 }
 
+// A triad is an orientation of a tree which has a single vertex of degree
+// 3 and otherwise only vertices of degree 2 and 1.
 fn generate_triads(n: usize, rooted_trees: &[Vec<Arc<Tree>>]) -> Vec<Tree> {
     collect_children(n - 1, 3, rooted_trees)
         .into_par_iter()
@@ -166,6 +168,18 @@ fn generate_rooted_trees(
     trees
 }
 
+/// Generates all trees with n vertices.
+///
+/// # Arguments
+///
+/// * n - The number of vertices in the trees to generate.
+/// * rooted_trees - A mutable vector of vectors that stores the rooted trees for each size from 0 to n - 1.
+/// * config - A reference to a Config struct that determines whether to generate only triads or cores.
+/// * stats - A mutable reference to a Stats struct that tracks statistics from the execution of the algorithm.
+///
+/// # Returns
+///
+/// A vector of all trees with n vertices.
 pub fn generate_trees(
     n: usize,
     rooted_trees: &mut Vec<Vec<Arc<Tree>>>,

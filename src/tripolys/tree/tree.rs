@@ -4,11 +4,26 @@ use std::{cmp::max, ops::Range};
 
 use itertools::Itertools;
 
-use crate::graph::traits::{VertexType, Edges, Vertices};
+use crate::graph::traits::{Edges, VertexType, Vertices};
 
-/// A recursive tree data-structure.
+/// A recursive tree data structure.
+///
+/// It is interpreted as a graph for the purpose of the algorithm that generates
+/// orientations of trees.  Note that the `Tree` data structure is specifically
+/// designed for use with the orientation generation algorithm and may not be
+/// suitable for other use cases.
+///
+/// It implements traits such as `Vertices` and `Edges`, and provides methods
+/// such as `max_arity` that return information specific to the graph
+/// interpretation of the data structure.
+///
+/// `Tree` uses shared pointers to point to its children to decrease memory
+/// consumption. Each shared pointer contains a reference to the child `Tree`
+/// object and a boolean flag that determines the direction of the connecting
+/// edge.
 #[derive(Clone, Debug, PartialOrd, PartialEq)]
 pub struct Tree {
+    /// The total number of vertices in the tree.
     pub(crate) num_vertices: usize,
     pub(crate) height: usize,
     pub(crate) max_arity: usize,
@@ -49,6 +64,7 @@ impl Tree {
         false
     }
 
+    /// Returns `true` if the tree is a path
     pub fn is_rooted_path(&self) -> bool {
         self.is_path() && self.arity() == 1
     }
@@ -61,39 +77,14 @@ impl Tree {
         self.max_arity < 3
     }
 
-    /// Returns `true` if the tree is a triad.
+    /// Adds a child to the current tree.
     ///
-    /// A triad is an orientation of a tree which has a single vertex of degree
-    /// 3 and otherwise only vertices of degree 2 and 1.
-    pub fn is_triad(&self) -> bool {
-        let mut root_found = false;
-
-        match self.arity() {
-            4.. => return false,
-            3 => {
-                root_found = true;
-            }
-            _ => {}
-        }
-
-        let mut stack = self.children.iter().map(|(t, _)| t.as_ref()).collect_vec();
-
-        while let Some(tree) = stack.pop() {
-            match tree.arity() {
-                3.. => return false,
-                2 => {
-                    if root_found {
-                        return false;
-                    }
-                    root_found = true;
-                }
-                _ => {}
-            }
-            stack.extend(tree.children.iter().map(|(t, _)| t.as_ref()));
-        }
-        root_found
-    }
-
+    /// This method takes an Arc to a child tree and a direction bool,
+    /// indicating the direction of the connecting edge.
+    ///
+    /// This method updates the properties of the current tree based on the
+    /// properties of the added child, such as the total number of vertices in the
+    /// tree, the height of the tree, and the maximum arity of the children.
     pub fn push_child(&mut self, child: Arc<Tree>, dir: bool) {
         self.num_vertices += child.num_vertices;
         self.height = max(self.height, child.height + 1);
@@ -101,6 +92,10 @@ impl Tree {
         self.children.push((child, dir));
     }
 
+    /// Returns an iterator over the children of the tree.
+    ///
+    /// The `iter` method returns an iterator that yields tuples of type `(Arc<Tree>, bool)`
+    /// representing the children of the tree and their directions.
     pub fn iter(&self) -> impl Iterator<Item = (Arc<Tree>, bool)> + '_ {
         self.children.iter().cloned()
     }
