@@ -115,7 +115,7 @@ fn generate_centered_trees(n: usize, rooted_trees: &[Vec<Arc<Tree>>]) -> Vec<Tre
 // A bicentered tree is formed by taking two rooted trees of equal height and
 // adding an edge between their roots
 fn generate_bicentered_trees(n: usize, rooted_trees: &[Vec<Arc<Tree>>]) -> Vec<Tree> {
-    let connect = |tree: Arc<Tree>, child: Arc<Tree>| {
+    fn connect(tree: Arc<Tree>, child: Arc<Tree>) -> Vec<Tree> {
         if *tree == *child {
             let mut t1 = (*tree).clone();
             t1.push_child(child, true);
@@ -127,7 +127,7 @@ fn generate_bicentered_trees(n: usize, rooted_trees: &[Vec<Arc<Tree>>]) -> Vec<T
             t2.push_child(child, false);
             vec![t1, t2]
         }
-    };
+    }
 
     collect_children(n, 2, rooted_trees)
         .into_iter()
