@@ -83,7 +83,7 @@ fn connect(children: Vec<Arc<Tree>>) -> Vec<Tree> {
         .map(|edges| children.iter().cloned().zip(edges))
         .filter(|v| v.clone().is_sorted())
         .map(|t| t.collect())
-        .collect::<Vec<_>>()
+        .collect()
 }
 
 fn trees(n: usize, rooted_trees: &[Vec<Arc<Tree>>]) -> Vec<Tree> {
