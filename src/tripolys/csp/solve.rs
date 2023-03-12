@@ -40,28 +40,6 @@ pub struct Stats {
     pub mac3_time: Duration,
 }
 
-pub fn solve<C>(domains: &mut Vec<Domain<Value>>, constraints: &C, stats: &mut Stats) -> bool
-where
-    C: Constraints,
-{
-    trace!("  > Preprocessing with AC-3");
-    let t_start = Instant::now();
-    let ac = ac_3(domains, constraints, stats);
-    let t_end = t_start.elapsed();
-    stats.ac3_time = t_end;
-
-    if !ac {
-        return false;
-    }
-
-    trace!("  > Solving with MAC-3");
-    let t_start = Instant::now();
-    let solve = solve_recursive(domains, constraints, stats);
-    let t_end = t_start.elapsed();
-    stats.mac3_time = t_end;
-    solve
-}
-
 enum Revision {
     Unchanged,
     Changed,
@@ -151,6 +129,29 @@ where
     true
 }
 
+pub fn solve<C>(domains: &mut Vec<Domain<Value>>, constraints: &C, stats: &mut Stats) -> bool
+where
+    C: Constraints,
+{
+    trace!("  > Preprocessing with AC-3");
+    let t_start = Instant::now();
+    let ac = ac_3(domains, constraints, stats);
+    let t_end = t_start.elapsed();
+    stats.ac3_time = t_end;
+
+    if !ac {
+        return false;
+    }
+
+    trace!("  > Solving with MAC-3");
+    let t_start = Instant::now();
+    let solve = solve_recursive(domains, constraints, stats);
+    let t_end = t_start.elapsed();
+    stats.mac3_time = t_end;
+    solve
+}
+
+
 fn solve_recursive<C>(domains: &mut Vec<Domain<Value>>, constraints: &C, stats: &mut Stats) -> bool
 where
     C: Constraints,
@@ -206,6 +207,7 @@ where
 
     status
 }
+
 
 fn debug_print(domains: &Vec<Domain<Value>>) {
     for (i, d) in domains.iter().enumerate() {

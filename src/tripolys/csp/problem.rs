@@ -2,7 +2,6 @@ use indexmap::IndexSet;
 use std::hash::Hash;
 
 use crate::graph::traits::Digraph;
-use crate::graph::AdjMatrix;
 
 use super::{
     domain::Domain,
@@ -51,8 +50,8 @@ where
         let constraint = HomomorphismConstraint {
             arcs,
             neighbors,
-            g: AdjMatrix::from_edges(g.edges().map(|(u, v)| (g_index(&u), g_index(&v)))),
-            h: AdjMatrix::from_edges(h.edges().map(|(u, v)| (h_index(&u), h_index(&v)))),
+            g: matrix::Matrix::from_edges(g.edges().map(|(u, v)| (g_index(&u), g_index(&v)))),
+            h: matrix::Matrix::from_edges(h.edges().map(|(u, v)| (h_index(&u), h_index(&v)))),
         };
 
         Problem {
@@ -146,8 +145,8 @@ where
 pub struct HomomorphismConstraint {
     arcs: Vec<(usize, usize)>,
     neighbors: Vec<Vec<(usize, usize)>>,
-    g: AdjMatrix,
-    h: AdjMatrix,
+    g: matrix::Matrix,
+    h: matrix::Matrix,
 }
 
 pub trait Constraints {
@@ -181,6 +180,80 @@ impl Constraints for HomomorphismConstraint {
             self.h.has_edge(ai, aj)
         } else {
             self.h.has_edge(aj, ai)
+        }
+    }
+}
+
+mod matrix {
+    use std::cmp;
+
+    use bitvec::bitvec;
+    use bitvec::vec::BitVec;
+
+    /// AdjMatrix is a graph using a matrix representation.
+    ///
+    /// It is used in the backtracking algorithm, because of frequent edge-lookup
+    /// which it implements in O(1).
+    #[derive(Clone, Debug, Default)]
+    pub struct Matrix {
+        adjacencies: BitVec,
+        num_vertices: usize,
+    }
+
+    impl Matrix {
+        pub fn from_edges<I>(edges: I) -> Self
+        where
+            I: IntoIterator<Item = (usize, usize)>,
+        {
+            let edges = Vec::from_iter(edges);
+
+            let mut num_vertices = 0;
+            for &(u, v) in &edges {
+                num_vertices = cmp::max(num_vertices, cmp::max(u, v) + 1);
+            }
+
+            let mut adjacencies = bitvec![0; num_vertices * num_vertices];
+
+            for &(u, v) in &edges {
+                adjacencies.set(u * num_vertices + v, true);
+            }
+
+            Matrix {
+                adjacencies,
+                num_vertices,
+            }
+        }
+
+        pub fn has_edge(&self, u: usize, v: usize) -> bool {
+            if u >= self.num_vertices || v >= self.num_vertices {
+                return false;
+            }
+
+            *self.adjacencies.get(u * self.num_vertices + v).unwrap()
+        }
+    }
+
+    impl FromIterator<(usize, usize)> for Matrix {
+        fn from_iter<T: IntoIterator<Item = (usize, usize)>>(iter: T) -> Self {
+            Self::from_edges(iter)
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::Matrix;
+
+        #[test]
+        fn test_from_edges_adj_matrix() {
+            let edges = vec![(0, 1), (1, 2), (2, 3)];
+            let adj_matrix = Matrix::from_edges(edges);
+
+            assert_eq!(adj_matrix.num_vertices, 4);
+            assert_eq!(adj_matrix.adjacencies.len(), 16);
+            assert_eq!(adj_matrix.has_edge(0, 1), true);
+            assert_eq!(adj_matrix.has_edge(1, 2), true);
+            assert_eq!(adj_matrix.has_edge(2, 3), true);
+            assert_eq!(adj_matrix.has_edge(3, 0), false);
         }
     }
 }
