@@ -47,17 +47,25 @@ impl<V: Hash + Clone + Eq> AdjList<V> {
         Self::default()
     }
 
-    fn add_vertex(&mut self, v: V) {
+    pub fn add_vertex(&mut self, v: V) {
         self.lists.entry(v).or_default();
     }
 
-    fn add_edge(&mut self, u: V, v: V) {
+    pub fn add_edge(&mut self, u: V, v: V) {
         self.lists
             .entry(u.clone())
             .or_default()
             .outgoing
             .insert(v.clone());
         self.lists.entry(v).or_default().incoming.insert(u);
+    }
+
+    pub fn from_edges<I: IntoIterator<Item = (V, V)>>(edges: I) -> AdjList<V> {
+        let mut g = AdjList::new();
+        for (u, v) in edges {
+            g.add_edge(u, v);
+        }
+        g
     }
 }
 
