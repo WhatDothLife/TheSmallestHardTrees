@@ -13,7 +13,6 @@ use crate::{csp::Problem, graph::traits::Digraph};
 /// # Examples
 ///
 /// ```
-/// use tripolys::graph::traits::Build;
 /// use tripolys::graph::AdjList;
 /// use tripolys::tree::is_core_tree;
 ///
@@ -43,7 +42,6 @@ where
 /// # Examples
 ///
 /// ```
-/// use tripolys::graph::traits::Build;
 /// use tripolys::graph::AdjList;
 /// use tripolys::tree::is_core_tree;
 /// use tripolys::tree::is_rooted_core_tree;

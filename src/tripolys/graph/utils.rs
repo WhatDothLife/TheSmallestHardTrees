@@ -67,9 +67,8 @@ where
 /// # Examples
 ///
 /// ```
-/// use tripolys::graph::traits::Build;
 /// use tripolys::graph::AdjList;
-/// use tripolys::algebra::is_balanced;
+/// use tripolys::graph::utils::is_balanced;
 ///
 /// let mut g = AdjList::from_edges([(0, 1), (1, 2), (2, 3), (1, 4)]);
 /// assert!(is_balanced(&g));
@@ -92,9 +91,8 @@ where
 /// # Examples
 ///
 /// ```
-/// use tripolys::graph::traits::Build;
 /// use tripolys::graph::AdjList;
-/// use tripolys::algebra::levels;
+/// use tripolys::graph::utils::levels;
 ///
 /// let mut g = AdjList::from_edges([("a", "b"), ("b", "c"), ("c", "d"), ("b", "e")]);
 /// assert_eq!(levels(&g), Some([("a", 0), ("b", 1), ("c", 2), ("d", 3), ("e", 2)].into_iter().collect()));
