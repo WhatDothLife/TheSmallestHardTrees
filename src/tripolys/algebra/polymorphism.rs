@@ -210,7 +210,7 @@ impl FromStr for Condition {
     fn from_str(s: &str) -> Result<Self, <Self as FromStr>::Err> {
         match &*s.to_ascii_lowercase() {
             "majority" => Ok(Condition::Majority),
-            "siggers" => Ok(Condition::Siggers),
+            // "siggers" => Ok(Condition::Siggers),
             "kmm" => Ok(Condition::Kmm),
             _ => {
                 if let Some((pr, su)) = s.split_once('-') {
