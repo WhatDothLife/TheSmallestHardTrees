@@ -65,12 +65,13 @@ where
     g
 }
 
-pub fn triad<G>(s: &str) -> Result<G, ParseTriadError>
+/// Returns the complete digraph on `n` vertices.
+pub fn triad<G>(s: &str) -> Result<G, String>
 where
     G: Build<Vertex = usize>,
 {
     if s.matches(',').count() != 2 {
-        return Err(ParseTriadError::NumArms);
+        return Err("A triad must have exactly 3 arms!".into());
     }
 
     let nvertices = s.len() - 1;
@@ -98,7 +99,9 @@ where
                     }
                 }
                 c => {
-                    return Err(ParseTriadError::InvalidCharacter(c));
+                    return Err(format!(
+                        "Could not parse {c} as edge (must be either '0' or '1')"
+                    ));
                 }
             }
             j += 1;
@@ -107,20 +110,3 @@ where
 
     Ok(g)
 }
-
-#[derive(Debug)]
-pub enum ParseTriadError {
-    NumArms,
-    InvalidCharacter(char),
-}
-
-impl std::fmt::Display for ParseTriadError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            ParseTriadError::NumArms => write!(f, "A triad must have exactly 3 arms!"),
-            ParseTriadError::InvalidCharacter(c) => write!(f, "Could not parse: {c}"),
-        }
-    }
-}
-
-impl std::error::Error for ParseTriadError {}
