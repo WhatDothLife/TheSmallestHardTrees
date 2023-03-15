@@ -193,20 +193,6 @@ impl<'a, V: Clone> Iterator for EdgeIter<'a, V> {
     }
 }
 
-impl<V: Hash + Clone + Eq + std::fmt::Display> ToString for AdjList<V> {
-    fn to_string(&self) -> String {
-        let mut s = String::from('[');
-        for (i, (u, v)) in self.edges().enumerate() {
-            if i != 0 {
-                s.push(',');
-            }
-            s.push_str(&format!("({u},{v})"));
-        }
-        s.push(']');
-        s
-    }
-}
-
 impl<V: Eq + Hash + Clone> Build for AdjList<V> {
     fn with_capacities(nvertices: usize, _nedges: usize) -> Self {
         Self {
