@@ -4,8 +4,9 @@ use csv::WriterBuilder;
 use rayon::prelude::*;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
-use tripolys::csp::SolveStats;
-use tripolys::graph::formats::{edge_list, from_edge_list};
+use tripolys::csp::Stats;
+// use tripolys::graph::formats::{edge_list, from_edge_list};
+use tripolys::graph::utils::{edge_list, parse_edge_list};
 use tripolys::graph::AdjList;
 
 use std::str::FromStr;
@@ -14,7 +15,7 @@ use tripolys::algebra::{Condition, MetaProblem};
 
 use crate::{parse_graph, print_stats, CmdResult};
 
-const AVAILABLE_CONDITIONS: [&str; 10] = [
+const AVAILABLE_CONDITIONS: [&str; 9] = [
     "majority    majority",
     "k-nu        k-ary near-unamity",
     "k-wnu       k-ary weak near-unamity",
@@ -24,7 +25,7 @@ const AVAILABLE_CONDITIONS: [&str; 10] = [
     "n-homck     Hobby-McKenzie chain of length n",
     "n-hami      Hagemann-Mitschke chain of length n",
     "n-ts        Totally symmetric of arity n",
-    "siggers     Siggers (consider testing for kmm, it is faster)",
+    // "siggers     Siggers (consider testing for kmm, it is faster)",
 ];
 
 pub fn cli() -> App<'static, 'static> {
@@ -150,7 +151,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
         };
 
         if !no_stats {
-            print_stats(problem.stats().unwrap());
+            print_stats(problem.stats());
         }
 
         return Ok(());
@@ -164,9 +165,9 @@ pub fn command(args: &ArgMatches) -> CmdResult {
     if input.ends_with("csv") {
         lines.next();
     }
-    let graphs: Vec<AdjList<usize>> = lines
-        .map(|line| from_edge_list(line.split(';').next().unwrap()))
-        .collect();
+    let graphs = lines
+        .map(|line| parse_edge_list(line.split(';').next().unwrap()))
+        .collect::<Result<Vec<AdjList<usize>>, _>>()?;
 
     println!("  > Checking for polymorphisms...",);
     let t_start = std::time::Instant::now();
@@ -182,7 +183,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
                 graph,
                 found,
                 stats: if !no_stats {
-                    Some(problem.stats().unwrap())
+                    Some(problem.stats())
                 } else {
                     None
                 },
@@ -212,7 +213,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
 struct Record {
     pub graph: String,
     pub found: bool,
-    pub stats: Option<SolveStats>,
+    pub stats: Option<Stats>,
 }
 
 impl Serialize for Record {

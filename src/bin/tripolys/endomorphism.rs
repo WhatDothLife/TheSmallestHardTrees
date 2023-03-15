@@ -1,6 +1,5 @@
 use clap::{App, Arg, ArgGroup, ArgMatches, SubCommand};
 use colored::*;
-use itertools::Itertools;
 use tripolys::{csp::Problem, graph::AdjList};
 
 use crate::{parse_graph, print_stats, CmdResult};
@@ -37,41 +36,42 @@ pub fn cli() -> App<'static, 'static> {
 }
 
 pub fn command(args: &ArgMatches) -> CmdResult {
-    let graph = args.value_of("graph").unwrap();
-    let h: AdjList<usize> = parse_graph(graph)?;
+    unimplemented!();
+    // let graph = args.value_of("graph").unwrap();
+    // let h: AdjList<usize> = parse_graph(graph)?;
 
-    println!("\n> Checking graph...");
-    let mut problem = Problem::new(&h, &h);
-    let mut sols = Vec::new();
-    problem.solve_all(|sol| sols.push(sol));
+    // println!("\n> Checking graph...");
+    // let mut problem = Problem::new(&h, &h);
+    // let mut sols = Vec::new();
+    // problem.solve_all(|sol| sols.push(sol));
 
-    let mut injective = true;
-    for sol in &sols {
-        if !sol.iter().all_unique() {
-            injective = false;
-            break;
-        }
-    }
-    if injective {
-        println!("{}", format!("  ✓ {graph} is a core\n").green());
-    } else {
-        println!("{}", format!("  ! {graph} is not a core\n").red());
-        if args.is_present("find") {
-            let (_, i) = sols
-                .iter()
-                .enumerate()
-                .map(|(i, sol)| (sol.iter().unique().count(), i))
-                .min()
-                .unwrap();
+    // let mut injective = true;
+    // for sol in &sols {
+    //     if !sol.iter().all_unique() {
+    //         injective = false;
+    //         break;
+    //     }
+    // }
+    // if injective {
+    //     println!("{}", format!("  ✓ {graph} is a core\n").green());
+    // } else {
+    //     println!("{}", format!("  ! {graph} is not a core\n").red());
+    //     if args.is_present("find") {
+    //         let (_, i) = sols
+    //             .iter()
+    //             .enumerate()
+    //             .map(|(i, sol)| (sol.iter().unique().count(), i))
+    //             .min()
+    //             .unwrap();
 
-            println!("> Homomorphism:");
-            for (j, sol) in sols[i].iter().enumerate() {
-                println!("  {} -> {}", j, *sol);
-            }
-        }
-    }
+    //         println!("> Homomorphism:");
+    //         for (j, sol) in sols[i].iter().enumerate() {
+    //             println!("  {} -> {}", j, *sol);
+    //         }
+    //     }
+    // }
 
-    print_stats(problem.stats().unwrap());
+    // print_stats(problem.stats());
 
-    Ok(())
+    // Ok(())
 }

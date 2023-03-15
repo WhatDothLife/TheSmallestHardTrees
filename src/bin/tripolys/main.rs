@@ -11,11 +11,10 @@ use std::fmt::Debug;
 
 use clap::{App, AppSettings};
 use colored::*;
-use tripolys::graph::{
-    classes::*,
-    formats::{from_csv, from_triad},
-};
-use tripolys::csp::SolveStats;
+use tripolys::csp::Stats;
+use tripolys::graph::traits::Build;
+use tripolys::graph::utils::parse_edge_list;
+use tripolys::graph::{classes::*, traits::VertexType};
 
 mod dot;
 mod endomorphism;
@@ -68,23 +67,24 @@ fn main() {
 
 fn parse_graph<G>(s: &str) -> Result<G, ParseGraphError>
 where
-    G: FromIterator<(usize, usize)>,
+    G: Build + VertexType<Vertex = usize>,
 {
     if let Ok(class) = from_class(s) {
         return Ok(class);
     }
-    if let Ok(triad) = from_triad(s) {
+    if let Ok(triad) = triad(s) {
         return Ok(triad);
     }
-    if let Ok(mut file) = std::fs::File::open(s) {
-        if let Ok(g) = from_csv(&mut file) {
-            return Ok(g);
-        }
+    if let Ok(graph) = parse_edge_list(s) {
+        return Ok(graph);
     }
     Err(ParseGraphError)
 }
 
-fn from_class<G: FromIterator<(usize, usize)>>(class: &str) -> Result<G, ClassNotFound> {
+fn from_class<G>(class: &str) -> Result<G, ClassNotFound>
+where
+    G: Build + VertexType<Vertex = usize>,
+{
     if let Some(g) = class.chars().next() {
         if let Ok(n) = &class[1..].parse::<usize>() {
             match g {
@@ -122,11 +122,12 @@ impl std::fmt::Display for ClassNotFound {
 impl std::error::Error for ClassNotFound {}
 
 #[rustfmt::skip]
-fn print_stats(stats: SolveStats) {
+fn print_stats(stats: Stats) {
     println!("Statistics:");
     println!("- {: <20} {:?}", "AC3 time:", stats.ac3_time);
     println!("- {: <20} {:?}", "MAC3 time:", stats.mac3_time);
     println!("- {: <20} {:?}", "Total time:", stats.mac3_time + stats.ac3_time);
     println!("- {: <20} {:?}", "#backtracks:", stats.backtracks);
+    println!("- {: <20} {:?}", "#assignments:", stats.assignments);
     println!("- {: <20} {:?}", "#consistency checks:", stats.ccks);
 }

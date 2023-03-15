@@ -5,4 +5,4 @@ mod solve;
 mod problem;
 
 pub use problem::Problem;
-pub use solve::SolveStats;
+pub use solve::Stats;

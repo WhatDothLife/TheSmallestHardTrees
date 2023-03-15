@@ -2,7 +2,7 @@ use std::ops::{Index, IndexMut};
 
 #[derive(Clone, Debug)]
 pub struct Domain<T> {
-    domain: Vec<T>,
+    data: Vec<T>,
     size: usize,
     states: Vec<usize>,
     modified: bool,
@@ -11,7 +11,7 @@ pub struct Domain<T> {
 impl<T> Domain<T> {
     pub fn new() -> Domain<T> {
         Domain {
-            domain: Vec::new(),
+            data: Vec::new(),
             size: 0,
             states: Vec::new(),
             modified: false,
@@ -28,35 +28,35 @@ impl<T> Domain<T> {
 
     pub fn assign(&mut self, index: usize) {
         self.size = 1;
-        self.domain.swap(index, 0);
+        self.data.swap(index, 0);
     }
 
     pub fn reset(&mut self) {
-        self.size = self.domain.len();
+        self.size = self.data.len();
     }
 
-    pub fn remove(&mut self, index: usize) {
+    pub fn swap_remove(&mut self, index: usize) {
         self.size -= 1;
-        self.domain.swap(index, self.size);
+        self.data.swap(index, self.size);
     }
 
     pub fn is_modified(&self) -> bool {
         self.modified
     }
 
-    pub fn push_state(&mut self) {
+    pub fn save_state(&mut self) {
         self.states.push(self.size);
         self.modified = true;
     }
 
-    pub fn pop_state(&mut self) {
+    pub fn restore_state(&mut self) {
         self.size = self.states.pop().unwrap();
         self.modified = false;
     }
 
     pub fn iter(&self) -> Iter<'_, T> {
         Iter {
-            domain: self.domain.iter(),
+            domain: self.data.iter(),
             count: self.size,
         }
     }
@@ -68,7 +68,7 @@ impl<T> FromIterator<T> for Domain<T> {
 
         Domain {
             size: domain.len(),
-            domain,
+            data: domain,
             states: Vec::new(),
             modified: false,
         }
@@ -107,13 +107,13 @@ impl<T> Index<usize> for Domain<T> {
     type Output = T;
 
     fn index(&self, index: usize) -> &Self::Output {
-        self.domain.index(index)
+        self.data.index(index)
     }
 }
 
 impl<T> IndexMut<usize> for Domain<T> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        self.domain.index_mut(index)
+        self.data.index_mut(index)
     }
 }
 
@@ -146,23 +146,11 @@ mod tests {
     #[test]
     fn test_domain_remove() {
         let mut domain = Domain::from_iter(vec![1, 2, 3]);
-        domain.remove(1);
+        domain.swap_remove(1);
         assert_eq!(domain.size(), 2);
         assert_eq!(domain[0], 1);
         assert_eq!(domain[1], 3);
     }
-
-    // #[test]
-    // fn test_domain_push_and_pop_state() {
-    //     let mut domain = Domain::from_iter(vec![1, 2, 3]);
-    //     domain.push_state();
-    //     domain.assign(2);
-    //     assert_eq!(domain.size(), 1);
-
-    //     domain.pop_state();
-    //     assert_eq!(domain.size(), 3);
-    //     assert_eq!(domain[0], 3);
-    // }
 
     #[test]
     fn test_domain_iter() {
@@ -190,3 +178,37 @@ mod tests {
         assert_eq!(domain[0], 4);
     }
 }
+
+// #[derive(Clone, Debug)]
+// pub struct Domains<T> {
+//     domains: Vec<Domain<T>>,
+//     trail: Vec<Var>,
+//     states: Vec<usize>,
+// }
+
+// impl<T> Domains<T> {
+//     pub fn remove_value(&mut self, x: Var, index: usize) {
+//         let dom_x = &mut self.domains[x];
+
+//         if !dom_x.is_modified() {
+//             dom_x.save_state();
+//             self.trail.push(x);
+//         }
+//         dom_x.swap_remove(index);
+//     }
+
+//     pub fn assign(&mut self, x: Var, index: usize) {
+//         self.domains[x].save_state();
+//         self.domains[x].assign(index);
+//         self.states.push(self.trail.len());
+//         self.trail.push(x);
+//     }
+
+//     pub fn backtrack(&mut self) {
+//         let last_state = self.states.pop().expect("No state saved");
+
+//         for x in self.trail.drain(last_state..) {
+//             self.domains[x].restore_state();
+//         }
+//     }
+// }

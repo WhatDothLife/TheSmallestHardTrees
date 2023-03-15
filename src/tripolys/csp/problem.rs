@@ -2,20 +2,25 @@ use indexmap::IndexSet;
 use std::hash::Hash;
 
 use crate::graph::traits::Digraph;
-use crate::graph::AdjMatrix;
 
-use super::domain::Domain;
-use super::solve::{ac3, solve, Arc, Direction, SolveConfig, SolveStats};
+use super::{
+    domain::Domain,
+    solve::{ac_3, solve, Stats},
+};
+
+pub type Var = usize;
+pub type Value = usize;
+pub type Arc = (Var, Var);
+pub type Assignment = (Var, Value);
 
 /// An instance of the H-Colouring problem.
 #[derive(Clone)]
 pub struct Problem<X, A> {
     domains: Vec<Domain<usize>>,
-    template: AdjMatrix,
-    arcs: Vec<Arc>,
+    constraint: HomomorphismConstraint,
     variable_indices: IndexSet<X>,
     value_indices: IndexSet<A>,
-    stats: Option<SolveStats>,
+    stats: Stats,
 }
 
 impl<X, A> Problem<X, A>
@@ -30,75 +35,64 @@ where
     {
         let variable_indices: IndexSet<_> = g.vertices().collect();
         let value_indices: IndexSet<_> = h.vertices().collect();
+        let g_index = |x: &X| variable_indices.get_index_of(x).unwrap();
+        let h_index = |a: &A| value_indices.get_index_of(a).unwrap();
 
-        let domains = (0..g.vertex_count())
+        let domains: Vec<_> = (0..g.vertex_count())
             .map(|_| Domain::from_iter(0..value_indices.len()))
             .collect();
-        let template = AdjMatrix::from_edges(h.edges().map(|(u, v)| {
-            (
-                value_indices.get_index_of(&u).unwrap(),
-                value_indices.get_index_of(&v).unwrap(),
-            )
-        }));
         let arcs: Vec<_> = g
             .edges()
-            .map(|(u, v)| {
-                (
-                    variable_indices.get_index_of(&u).unwrap(),
-                    variable_indices.get_index_of(&v).unwrap(),
-                )
-            })
-            .flat_map(|(u, v)| [(u, v, Direction::Forward), (v, u, Direction::Backward)])
+            .map(|(u, v)| (g_index(&u), g_index(&v)))
+            .flat_map(|(u, v)| [(u, v), (v, u)])
             .collect();
+        let neighbors = group_neighbors(domains.len(), arcs.clone());
+        let constraint = HomomorphismConstraint {
+            arcs,
+            neighbors,
+            g: matrix::Matrix::from_edges(g.edges().map(|(u, v)| (g_index(&u), g_index(&v)))),
+            h: matrix::Matrix::from_edges(h.edges().map(|(u, v)| (h_index(&u), h_index(&v)))),
+        };
 
         Problem {
             domains,
-            template,
-            value_indices,
+            constraint,
             variable_indices,
-            arcs,
-            stats: None,
+            value_indices,
+            stats: Stats::default(),
         }
     }
 
-    pub fn set_value(&mut self, x: X, a: A) {
+    pub fn precolor(&mut self, x: X, a: A) {
         let var_index = self.variable_indices.get_index_of(&x).unwrap();
         let val_index = self.value_indices.get_index_of(&a).unwrap();
         self.domains[var_index] = Domain::from_iter([val_index]);
     }
 
-    pub fn set_domain<D>(&mut self, x: X, domain: D)
+    pub fn set_list<I>(&mut self, x: X, list: I)
     where
-        D: IntoIterator<Item = A>,
+        I: IntoIterator<Item = A>,
     {
         let var_index = self.variable_indices.get_index_of(&x).unwrap();
         let val_index = |a| self.value_indices.get_index_of(&a).unwrap();
-        let domain = Domain::from_iter(domain.into_iter().map(val_index));
-        self.domains[var_index] = domain;
+        self.domains[var_index] = Domain::from_iter(list.into_iter().map(val_index));
     }
 
-    pub fn stats(&self) -> Option<SolveStats> {
+    pub fn stats(&self) -> Stats {
         self.stats
     }
 
+    pub fn all_singleton(&self) -> bool {
+        self.domains.iter().all(|d| d.size() == 1)
+    }
+
     pub fn make_arc_consistent(&mut self) -> bool {
-        let neighbors = self.neighbors();
-        ac3(
-            &mut self.domains,
-            self.arcs.clone(),
-            &neighbors,
-            &self.template,
-            &mut SolveConfig::default(),
-        )
+        ac_3(&mut self.domains, &self.constraint, &mut self.stats)
     }
 
     /// Returns true, if the there exists a solution to the problem.
     pub fn solution_exists(&mut self) -> bool {
-        self.solve_first().is_some()
-    }
-
-    pub fn domains(&self) -> impl Iterator<Item = &Domain<usize>> {
-        self.domains.iter()
+        solve(&mut self.domains, &self.constraint, &mut self.stats)
     }
 
     /// Get the first found solution to the problem
@@ -107,56 +101,159 @@ where
     /// one solution: the extra work in solve all is the part needed to know
     /// that the solution is unique, in that case. This method can not say if
     /// the solution is unique or not.
-    pub fn solve_first<'a>(&'a mut self) -> Option<Solution<'a, X, A>> {
-        let mut config = SolveConfig::default();
-        config.stop_at_first = true;
-        let mut solution = None;
-        self.solve(&mut config, |s| solution = Some(s));
-        self.stats = Some(config.stats);
-        solution.map(|v| Solution {
-            raw: v,
-            variable_indices: &self.variable_indices,
-            value_indices: &self.value_indices,
-        })
-    }
-
-    pub fn solve_all(&mut self, out: impl FnMut(Vec<usize>)) {
-        let mut config = SolveConfig::default();
-        self.solve(&mut config, out);
-        self.stats = Some(config.stats);
-    }
-
-    fn solve(&mut self, config: &mut SolveConfig, out: impl FnMut(Vec<usize>)) {
-        let neighbors = self.neighbors();
-
-        solve(
-            &mut self.domains,
-            self.arcs.clone(),
-            &neighbors,
-            &self.template,
-            out,
-            config,
-        );
-    }
-
-    fn neighbors(&self) -> Vec<Vec<Arc>> {
-        let mut neighbors = vec![Vec::new(); self.domains.len()];
-        for &(u, v, dir) in &self.arcs {
-            neighbors[v].push((u, v, dir));
+    pub fn solve<'a>(&'a mut self) -> Option<Solution<'a, X, A>> {
+        if self.solution_exists() {
+            Some(Solution {
+                raw_solution: (0..self.domains.len())
+                    .map(|i| self.domains[i][0])
+                    .collect(),
+                variable_indices: &self.variable_indices,
+                value_indices: &self.value_indices,
+            })
+        } else {
+            None
         }
-        neighbors
     }
 }
 
 pub struct Solution<'a, X, A> {
-    raw: Vec<usize>,
+    raw_solution: Vec<usize>,
     variable_indices: &'a IndexSet<X>,
     value_indices: &'a IndexSet<A>,
 }
 
-impl<'a, X: Hash + Eq + Clone, A: Clone> Solution<'a, X, A> {
-    pub fn value(&self, x: &X) -> A {
-        let index = self.variable_indices.get_index_of(x).unwrap();
-        self.value_indices[self.raw[index]].clone()
+impl<X: Hash + Eq + Clone, A> Solution<'_, X, A> {
+    pub fn value(&self, x: &X) -> &A {
+        let var_index = self.variable_indices.get_index_of(x).unwrap();
+        let val_index = self.raw_solution[var_index];
+        self.value_indices.get_index(val_index).unwrap()
+    }
+}
+
+fn group_neighbors<I>(num_vars: usize, arcs: I) -> Vec<Vec<Arc>>
+where
+    I: IntoIterator<Item = Arc>,
+{
+    let mut neighbors = vec![Vec::new(); num_vars];
+    for (u, v) in arcs {
+        neighbors[v].push((u, v));
+    }
+    neighbors
+}
+
+#[derive(Clone, Debug)]
+pub struct HomomorphismConstraint {
+    arcs: Vec<(usize, usize)>,
+    neighbors: Vec<Vec<(usize, usize)>>,
+    g: matrix::Matrix,
+    h: matrix::Matrix,
+}
+
+pub trait Constraints {
+    type ArcIter: Iterator<Item = Arc>;
+
+    /// Returns a vector of arcs, where each arc is a tuple of two variables
+    /// `(x, y)` representing a constraint between the two variables.
+    fn arcs(&self) -> Self::ArcIter;
+
+    fn neighbors(&self, x: Var) -> Vec<Arc>;
+
+    /// Returns a boolean indicating whether a given assignment `a1` is
+    /// consistent with another assignment `a2` with respect to the constraints
+    /// defined by the arcs.
+    fn check_arc(&self, a1: Assignment, a2: Assignment) -> bool;
+}
+
+impl Constraints for HomomorphismConstraint {
+    type ArcIter = std::vec::IntoIter<(usize, usize)>;
+
+    fn arcs(&self) -> Self::ArcIter {
+        self.arcs.clone().into_iter()
+    }
+
+    fn neighbors(&self, x: Var) -> Vec<Arc> {
+        self.neighbors[x].clone()
+    }
+
+    fn check_arc(&self, (i, ai): Assignment, (j, aj): Assignment) -> bool {
+        if self.g.has_edge(i, j) {
+            self.h.has_edge(ai, aj)
+        } else {
+            self.h.has_edge(aj, ai)
+        }
+    }
+}
+
+mod matrix {
+    use std::cmp;
+
+    use bitvec::bitvec;
+    use bitvec::vec::BitVec;
+
+    /// AdjMatrix is a graph using a matrix representation.
+    ///
+    /// It is used in the backtracking algorithm, because of frequent edge-lookup
+    /// which it implements in O(1).
+    #[derive(Clone, Debug, Default)]
+    pub struct Matrix {
+        adjacencies: BitVec,
+        num_vertices: usize,
+    }
+
+    impl Matrix {
+        pub fn from_edges<I>(edges: I) -> Self
+        where
+            I: IntoIterator<Item = (usize, usize)>,
+        {
+            let edges = Vec::from_iter(edges);
+
+            let mut num_vertices = 0;
+            for &(u, v) in &edges {
+                num_vertices = cmp::max(num_vertices, cmp::max(u, v) + 1);
+            }
+
+            let mut adjacencies = bitvec![0; num_vertices * num_vertices];
+
+            for &(u, v) in &edges {
+                adjacencies.set(u * num_vertices + v, true);
+            }
+
+            Matrix {
+                adjacencies,
+                num_vertices,
+            }
+        }
+
+        pub fn has_edge(&self, u: usize, v: usize) -> bool {
+            if u >= self.num_vertices || v >= self.num_vertices {
+                return false;
+            }
+
+            *self.adjacencies.get(u * self.num_vertices + v).unwrap()
+        }
+    }
+
+    impl FromIterator<(usize, usize)> for Matrix {
+        fn from_iter<T: IntoIterator<Item = (usize, usize)>>(iter: T) -> Self {
+            Self::from_edges(iter)
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::Matrix;
+
+        #[test]
+        fn test_from_edges_adj_matrix() {
+            let edges = vec![(0, 1), (1, 2), (2, 3)];
+            let adj_matrix = Matrix::from_edges(edges);
+
+            assert_eq!(adj_matrix.num_vertices, 4);
+            assert_eq!(adj_matrix.adjacencies.len(), 16);
+            assert_eq!(adj_matrix.has_edge(0, 1), true);
+            assert_eq!(adj_matrix.has_edge(1, 2), true);
+            assert_eq!(adj_matrix.has_edge(2, 3), true);
+            assert_eq!(adj_matrix.has_edge(3, 0), false);
+        }
     }
 }

@@ -29,16 +29,26 @@ impl<V> Default for Neighbors<V> {
 /// allow non-Copy types like `Vec` because it represents a tuple of any arity
 /// which we need to build the indicator graph of a metaproblem. It also
 /// implements fast contraction of vertices.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct AdjList<V> {
     lists: IndexMap<V, Neighbors<V>>,
 }
 
+impl<V> Default for AdjList<V> {
+    fn default() -> Self {
+        Self {
+            lists: Default::default(),
+        }
+    }
+}
+
 impl<V: Hash + Clone + Eq> AdjList<V> {
     pub fn new() -> AdjList<V> {
-        AdjList {
-            lists: IndexMap::new(),
-        }
+        Self::default()
+    }
+
+    pub fn add_vertex(&mut self, v: V) {
+        self.lists.entry(v).or_default();
     }
 
     pub fn add_edge(&mut self, u: V, v: V) {
@@ -50,11 +60,12 @@ impl<V: Hash + Clone + Eq> AdjList<V> {
         self.lists.entry(v).or_default().incoming.insert(u);
     }
 
-    pub fn from_edges<I>(edges: I) -> Self
-    where
-        I: IntoIterator<Item = (V, V)>,
-    {
-        Self::from_iter(edges)
+    pub fn from_edges<I: IntoIterator<Item = (V, V)>>(edges: I) -> AdjList<V> {
+        let mut g = AdjList::new();
+        for (u, v) in edges {
+            g.add_edge(u, v);
+        }
+        g
     }
 }
 
@@ -137,13 +148,7 @@ impl<V: Hash + Clone + Eq> Contract for AdjList<V> {
 
 impl<V: Hash + Clone + Eq> FromIterator<(V, V)> for AdjList<V> {
     fn from_iter<T: IntoIterator<Item = (V, V)>>(iter: T) -> Self {
-        let mut graph = Self::new();
-
-        for (u, v) in iter {
-            graph.add_edge(u, v);
-        }
-
-        graph
+        Self::from_edges(iter)
     }
 }
 
@@ -188,17 +193,19 @@ impl<'a, V: Clone> Iterator for EdgeIter<'a, V> {
     }
 }
 
-impl<V: Hash + Clone + Eq + std::fmt::Display> ToString for AdjList<V> {
-    fn to_string(&self) -> String {
-        let mut s = String::from('[');
-        for (i, (u, v)) in self.edges().enumerate() {
-            if i != 0 {
-                s.push(',');
-            }
-            s.push_str(&format!("({u},{v})"));
+impl<V: Eq + Hash + Clone> Build for AdjList<V> {
+    fn with_capacities(nvertices: usize, _nedges: usize) -> Self {
+        Self {
+            lists: IndexMap::with_capacity(nvertices),
         }
-        s.push(']');
-        s
+    }
+
+    fn add_vertex(&mut self, v: Self::Vertex) {
+        self.add_vertex(v)
+    }
+
+    fn add_edge(&mut self, u: Self::Vertex, v: Self::Vertex) {
+        self.add_edge(u, v)
     }
 }
 

@@ -5,57 +5,9 @@ use std::hash::Hash;
 use std::str::FromStr;
 
 use crate::csp::Problem;
-use crate::graph::classes::directed_path;
-use crate::graph::traits::{Contract, Digraph, Edges, Vertices};
+use crate::graph::traits::{Contract, Edges, Vertices};
+use crate::graph::utils::levels;
 use crate::graph::AdjList;
-
-/// Returns `true` if the input graph `g` is balanced, `false` otherwise.
-///
-/// A digraph is considered balanced if its vertices can be organized into levels
-/// such that there exists a function lvl : H → N such that lvl(v) = lvl(u) + 1
-/// for all (u, v) ∈ E(H) and the smallest level is 0. The height of a balanced
-/// digraph is defined as the maximum level.
-///
-/// # Examples
-///
-/// ```
-/// use tripolys::graph::AdjList;
-/// use tripolys::algebra::is_balanced;
-///
-/// let mut g = AdjList::from_edges([(0, 1), (1, 2), (2, 3), (1, 4)]);
-/// assert!(is_balanced(&g));
-/// g.add_edge(0, 2);
-/// assert!(!is_balanced(&g));
-/// ```
-pub fn is_balanced<G>(g: &G) -> bool
-where
-    G: Digraph,
-{
-    let h: AdjList<_> = directed_path(g.edge_count());
-    Problem::new(g, h).solution_exists()
-}
-
-pub fn levels<G>(g: &G) -> Option<HashMap<G::Vertex, usize>>
-where
-    G: Digraph,
-{
-    for k in 0..g.edge_count() {
-        let h: AdjList<_> = directed_path(k + 1);
-        let mut problem = Problem::new(g, h);
-
-        if let Some(sol) = problem.solve_first() {
-            let map: HashMap<_, _> = g
-                .vertices()
-                .map(|v| {
-                    let level = sol.value(&v);
-                    (v, level)
-                })
-                .collect();
-            return Some(map);
-        }
-    }
-    None
-}
 
 type Partition<V> = Vec<Vec<V>>;
 
@@ -142,17 +94,17 @@ impl MetaProblem {
 
         for v_ind in indicator.vertices() {
             if let Some(u) = precolor(self.condition, &v_ind) {
-                problem.set_value(v_ind, u);
+                problem.precolor(v_ind, u);
             } else if self.conservative {
-                problem.set_domain(v_ind.clone(), v_ind.1.clone());
+                problem.set_list(v_ind.clone(), v_ind.1.clone());
             } else if self.idempotent {
                 if v_ind.1.iter().all_equal() {
-                    problem.set_value(v_ind.clone(), v_ind.1[0]);
+                    problem.precolor(v_ind.clone(), v_ind.1[0]);
                 } else {
-                    problem.set_domain(v_ind, template.vertices());
+                    problem.set_list(v_ind, template.vertices());
                 }
             } else {
-                problem.set_domain(v_ind, template.vertices());
+                problem.set_list(v_ind, template.vertices());
             }
         }
 
@@ -258,7 +210,7 @@ impl FromStr for Condition {
     fn from_str(s: &str) -> Result<Self, <Self as FromStr>::Err> {
         match &*s.to_ascii_lowercase() {
             "majority" => Ok(Condition::Majority),
-            "siggers" => Ok(Condition::Siggers),
+            // "siggers" => Ok(Condition::Siggers),
             "kmm" => Ok(Condition::Kmm),
             _ => {
                 if let Some((pr, su)) = s.split_once('-') {

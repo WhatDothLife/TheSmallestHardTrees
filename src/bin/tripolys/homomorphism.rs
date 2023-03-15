@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Debug, num::ParseIntError};
+use std::collections::HashMap;
 
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 use colored::Colorize;
@@ -32,19 +32,19 @@ pub fn cli() -> App<'static, 'static> {
             Arg::with_name("precolor")
                 .short("p")
                 .long("precolor")
-                .value_name("FILE")
+                .value_name("PRECOLORING")
                 .takes_value(true)
                 .conflicts_with("lists")
-                .help("...with precoloring for some vertices [each line holding v:p(v)]"),
+                .help("...with precoloring for some vertices [v->p(v)]"),
         )
         .arg(
             Arg::with_name("lists")
                 .short("l")
                 .long("lists")
-                .value_name("FILE")
+                .value_name("LISTS")
                 .takes_value(true)
                 .conflicts_with("precolor")
-                .help("...with lists for each vertex v [line i holding l(i) given by comma-seperated values]"),
+                .help("...with lists for each vertex v [i: l(i) given by comma-seperated values]"),
         )
 }
 
@@ -55,20 +55,18 @@ pub fn command(args: &ArgMatches) -> CmdResult {
     let mut problem = Problem::new(g, h);
 
     if let Some(p) = args.value_of("precolor") {
-        let content = std::fs::read_to_string(p)?;
-        let precoloring = parse_precoloring(&content)?;
+        let precoloring = parse_precoloring(p)?;
 
         for (v, d) in precoloring {
-            problem.set_value(v, d);
+            problem.precolor(v, d);
         }
     }
 
     if let Some(l) = args.value_of("lists") {
-        let content = std::fs::read_to_string(l)?;
-        let lists = parse_lists(&content)?;
+        let lists = parse_lists(l)?;
 
         for (v, d) in lists.into_iter().enumerate() {
-            problem.set_domain(v, d);
+            problem.set_list(v, d);
         }
     }
 
@@ -80,49 +78,31 @@ pub fn command(args: &ArgMatches) -> CmdResult {
         println!("{}", "  ! Doesn't exist\n".to_string().red());
     };
 
-    print_stats(problem.stats().unwrap());
+    print_stats(problem.stats());
 
     Ok(())
 }
 
-fn parse_lists(s: &str) -> Result<Vec<Vec<usize>>, ParseIntError> {
-    s.lines()
+fn parse_lists(s: &str) -> Result<Vec<Vec<usize>>, &str> {
+    s.split(['\n', ';'])
         .map(|l| {
             l.split(',')
                 .map(|v| v.parse::<usize>())
                 .collect::<Result<Vec<_>, _>>()
         })
         .collect::<Result<Vec<_>, _>>()
+        .map_err(|_| "Couldn't parse lists")
 }
 
-fn parse_precoloring(s: &str) -> Result<HashMap<usize, usize>, ParsePrecoloringError> {
-    use self::ParsePrecoloringError::*;
-
-    s.lines()
+fn parse_precoloring(s: &str) -> Result<HashMap<usize, usize>, &str> {
+    s.split(['\n', ','])
         .map(|l| {
-            l.split_once(':').map(|(a, b)| {
+            l.split_once(":").map(|(a, b)| {
                 a.parse::<usize>()
                     .and_then(|u| b.parse::<usize>().map(|v| (u, v)))
-                    .map_err(ParseVertex)
+                    .map_err(|_| "Couldn't parse precoloring")
             })
         })
         .collect::<Option<Result<HashMap<_, _>, _>>>()
-        .ok_or(MissingDelimiter)?
+        .ok_or("Couldn't parse precoloring")?
 }
-
-#[derive(Debug)]
-pub enum ParsePrecoloringError {
-    MissingDelimiter,
-    ParseVertex(ParseIntError),
-}
-
-impl std::fmt::Display for ParsePrecoloringError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            ParsePrecoloringError::MissingDelimiter => write!(f, "Missing delimiter: ':'"),
-            ParsePrecoloringError::ParseVertex(e) => std::fmt::Display::fmt(e, f),
-        }
-    }
-}
-
-impl std::error::Error for ParsePrecoloringError {}
