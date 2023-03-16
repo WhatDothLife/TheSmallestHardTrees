@@ -105,9 +105,9 @@ where
         let h: AdjList<_> = directed_path(k + 1);
         let mut problem = Problem::new(g, h);
 
-        if let Some(sol) = problem.solve() {
-            let levels: HashMap<_, _> = g.vertices().map(|v| (v.clone(), *sol.value(&v))).collect();
-            return Some(levels);
+        let res =  problem.solve();
+        if res.is_some() {
+            return res;
         }
     }
     None

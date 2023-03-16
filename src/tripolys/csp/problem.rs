@@ -1,5 +1,5 @@
 use indexmap::IndexSet;
-use std::hash::Hash;
+use std::{collections::HashMap, hash::Hash};
 
 use crate::graph::traits::Digraph;
 
@@ -13,7 +13,7 @@ pub type Value = usize;
 pub type Arc = (Var, Var);
 pub type Assignment = (Var, Value);
 
-/// An instance of the H-Colouring problem.
+/// A graph homomorphism problem.
 #[derive(Clone)]
 pub struct Problem<X, A> {
     domains: Vec<Domain<usize>>,
@@ -92,7 +92,7 @@ where
 
     /// Returns true, if the there exists a solution to the problem.
     pub fn solution_exists(&mut self) -> bool {
-        solve(&mut self.domains, &self.constraint, &mut self.stats)
+        self.solve().is_some()
     }
 
     /// Get the first found solution to the problem
@@ -101,33 +101,44 @@ where
     /// one solution: the extra work in solve all is the part needed to know
     /// that the solution is unique, in that case. This method can not say if
     /// the solution is unique or not.
-    pub fn solve<'a>(&'a mut self) -> Option<Solution<'a, X, A>> {
-        if self.solution_exists() {
-            Some(Solution {
-                raw_solution: (0..self.domains.len())
-                    .map(|i| self.domains[i][0])
-                    .collect(),
-                variable_indices: &self.variable_indices,
-                value_indices: &self.value_indices,
-            })
-        } else {
-            None
-        }
+    pub fn solve(&mut self) -> Option<HashMap<X, A>> {
+        let mut res = None;
+        solve(
+            &mut self.domains,
+            &self.constraint,
+            &mut self.stats,
+            |sol| {
+                res = Some(solution(&sol, &self.variable_indices, &self.value_indices));
+            },
+            true,
+        );
+        res
+    }
+
+    pub fn solve_all(&mut self) -> Vec<HashMap<X, A>> {
+        let mut sols = Vec::new();
+        solve(
+            &mut self.domains,
+            &self.constraint,
+            &mut self.stats,
+            |sol| {
+                sols.push(solution(&sol, &self.variable_indices, &self.value_indices));
+            },
+            true,
+        );
+        sols
     }
 }
 
-pub struct Solution<'a, X, A> {
-    raw_solution: Vec<usize>,
-    variable_indices: &'a IndexSet<X>,
-    value_indices: &'a IndexSet<A>,
-}
-
-impl<X: Hash + Eq + Clone, A> Solution<'_, X, A> {
-    pub fn value(&self, x: &X) -> &A {
-        let var_index = self.variable_indices.get_index_of(x).unwrap();
-        let val_index = self.raw_solution[var_index];
-        self.value_indices.get_index(val_index).unwrap()
-    }
+fn solution<X: Hash + Eq + Clone, A: Clone>(
+    raw: &[usize],
+    variables_indices: &IndexSet<X>,
+    value_indices: &IndexSet<A>,
+) -> HashMap<X, A> {
+    raw.iter()
+        .enumerate()
+        .map(|(x, a)| (variables_indices[x].clone(), value_indices[*a].clone()))
+        .collect()
 }
 
 fn group_neighbors<I>(num_vars: usize, arcs: I) -> Vec<Vec<Arc>>

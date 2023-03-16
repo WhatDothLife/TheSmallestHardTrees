@@ -129,38 +129,50 @@ where
     true
 }
 
-pub fn solve<C>(domains: &mut Vec<Domain<Value>>, constraints: &C, stats: &mut Stats) -> bool
-where
+pub fn solve<C>(
+    domains: &mut Vec<Domain<Value>>,
+    constraints: &C,
+    stats: &mut Stats,
+    out: impl FnMut(Vec<Value>),
+    stop_at_first: bool,
+) where
     C: Constraints,
 {
     trace!("  > Preprocessing with AC-3");
     let t_start = Instant::now();
-    let ac = ac_3(domains, constraints, stats);
+    ac_3(domains, constraints, stats);
     let t_end = t_start.elapsed();
     stats.ac3_time = t_end;
 
-    if !ac {
-        return false;
-    }
-
     trace!("  > Solving with MAC-3");
     let t_start = Instant::now();
-    let solve = solve_recursive(domains, constraints, stats);
+    solve_recursive(domains, constraints, stats, out, stop_at_first);
     let t_end = t_start.elapsed();
     stats.mac3_time = t_end;
-    solve
 }
 
-
-fn solve_recursive<C>(domains: &mut Vec<Domain<Value>>, constraints: &C, stats: &mut Stats) -> bool
-where
+fn solve_recursive<C>(
+    domains: &mut Vec<Domain<Value>>,
+    constraints: &C,
+    stats: &mut Stats,
+    mut out: impl FnMut(Vec<Value>),
+    stop_at_first: bool,
+) where
     C: Constraints,
 {
+    // Variables wtih smallest remaining values first
+    // Order is static during the solving process
     let mut stack: Vec<Var> = (0..domains.len())
         .sorted_by_key(|&x| (domains[x].size() as isize).neg())
         .collect();
 
-    solve_recursive_inner(&mut stack, domains, constraints, stats)
+    let _ = solve_recursive_inner(&mut stack, domains, constraints, stats, &mut out, stop_at_first);
+}
+
+#[derive(Clone, Debug)]
+pub(crate) enum SolveError {
+    /// Used internally to stop after the first solution (if enabled)
+    RequestedStop,
 }
 
 fn solve_recursive_inner<C>(
@@ -168,15 +180,24 @@ fn solve_recursive_inner<C>(
     domains: &mut Vec<Domain<Value>>,
     constraints: &C,
     stats: &mut Stats,
-) -> bool
+    out: &mut impl FnMut(Vec<Value>),
+    stop_at_first: bool,
+) -> Result<(), SolveError>
 where
     C: Constraints,
 {
     if stack.is_empty() {
-        return true;
+        let solution = domains.iter().map(|d| d[0]).collect();
+        trace!("==> Valid solution: {:?}", solution);
+        stats.solutions += 1;
+        out(solution);
+
+        if stop_at_first {
+            return Err(SolveError::RequestedStop);
+        }
     }
 
-    let mut status = false;
+    let mut status = Ok(());
     let x = stack.pop().unwrap();
     trace!("Selected variable = {}", x);
 
@@ -190,13 +211,14 @@ where
         if mac_3(x, domains, constraints, &mut trail, stats) {
             trace!("Propagation successful, recursing...");
             // Repeat the algorithm recursively on the reduced domains
-            status = solve_recursive_inner(stack, domains, constraints, stats);
+            status =
+                solve_recursive_inner(stack, domains, constraints, stats, out, stop_at_first);
         } else {
             trace!("Detected inconsistency, backtracking...");
             stats.backtracks += 1;
         }
-        if status {
-            return true;
+        if status.is_err() {
+            break;
         }
         // Backtrack
         for x in trail {
@@ -207,7 +229,6 @@ where
 
     status
 }
-
 
 fn debug_print(domains: &Vec<Domain<Value>>) {
     for (i, d) in domains.iter().enumerate() {
