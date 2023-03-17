@@ -166,7 +166,14 @@ fn solve_recursive<C>(
         .sorted_by_key(|&x| (domains[x].size() as isize).neg())
         .collect();
 
-    let _ = solve_recursive_inner(&mut stack, domains, constraints, stats, &mut out, stop_at_first);
+    let _ = solve_recursive_inner(
+        &mut stack,
+        domains,
+        constraints,
+        stats,
+        &mut out,
+        stop_at_first,
+    );
 }
 
 #[derive(Clone, Debug)]
@@ -211,8 +218,7 @@ where
         if mac_3(x, domains, constraints, &mut trail, stats) {
             trace!("Propagation successful, recursing...");
             // Repeat the algorithm recursively on the reduced domains
-            status =
-                solve_recursive_inner(stack, domains, constraints, stats, out, stop_at_first);
+            status = solve_recursive_inner(stack, domains, constraints, stats, out, stop_at_first);
         } else {
             trace!("Detected inconsistency, backtracking...");
             stats.backtracks += 1;
