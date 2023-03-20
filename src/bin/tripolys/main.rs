@@ -7,7 +7,6 @@
 #![feature(is_some_and)]
 
 use std::error::Error;
-use std::fmt::Debug;
 
 use clap::{App, AppSettings};
 use colored::*;
@@ -65,7 +64,7 @@ fn main() {
     }
 }
 
-fn parse_graph<G>(s: &str) -> Result<G, ParseGraphError>
+fn parse_graph<G>(s: &str) -> Result<G, &str>
 where
     G: Build + VertexType<Vertex = usize>,
 {
@@ -78,10 +77,10 @@ where
     if let Ok(graph) = parse_edge_list(s) {
         return Ok(graph);
     }
-    Err(ParseGraphError)
+    Err("Could not parse graph from the given argument")
 }
 
-fn from_class<G>(class: &str) -> Result<G, ClassNotFound>
+fn from_class<G>(class: &str) -> Result<G, &str>
 where
     G: Build + VertexType<Vertex = usize>,
 {
@@ -92,34 +91,12 @@ where
                 'c' => return Ok(directed_cycle(*n)),
                 'p' => return Ok(directed_path(*n)),
                 't' => return Ok(transitive_tournament(*n)),
-                _ => return Err(ClassNotFound),
+                _ => return Err("No graph class registered with that name"),
             }
         }
     }
-    Err(ClassNotFound)
+    Err("No graph class registered with that name")
 }
-
-#[derive(Debug)]
-pub struct ParseGraphError;
-
-impl std::fmt::Display for ParseGraphError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Could not parse graph from the given argument")
-    }
-}
-
-impl std::error::Error for ParseGraphError {}
-
-#[derive(Debug)]
-pub struct ClassNotFound;
-
-impl std::fmt::Display for ClassNotFound {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "No graph class registered with that name")
-    }
-}
-
-impl std::error::Error for ClassNotFound {}
 
 #[rustfmt::skip]
 fn print_stats(stats: Stats) {
