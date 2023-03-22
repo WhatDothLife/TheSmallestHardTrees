@@ -79,11 +79,11 @@ pub fn is_balanced<G>(g: &G) -> bool
 where
     G: Digraph,
 {
-    let h: AdjList<_> = directed_path(g.edge_count());
+    let h: AdjList<_> = directed_path(g.vertex_count());
     Problem::new(g, h).solution_exists()
 }
 
-/// Computes the levels of a balanced digraph `g`,
+/// Computes the levels of a digraph `g`.
 ///
 /// Returns a `HashMap` where the keys are the vertices of `g` and the values
 /// are their levels, or `None` if `g` is not balanced.
@@ -103,9 +103,8 @@ where
 {
     for k in 0..g.vertex_count() {
         let h: AdjList<_> = directed_path(k + 1);
-        let mut problem = Problem::new(g, h);
+        let res = Problem::new(g, h).solve();
 
-        let res =  problem.solve();
         if res.is_some() {
             return res;
         }

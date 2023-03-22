@@ -6,21 +6,19 @@ use itertools::Itertools;
 
 use crate::graph::traits::{Edges, VertexType, Vertices};
 
-/// A recursive tree data structure.
+/// An orientation of a tree defined as a recursive data structure.
 ///
-/// It is interpreted as a graph for the purpose of the algorithm that generates
-/// orientations of trees.  Note that the `Tree` data structure is specifically
-/// designed for use with the orientation generation algorithm and may not be
-/// suitable for other use cases.
+/// Note that the `Tree` data structure is specifically designed for use with
+/// the orientation generation algorithm and may not be suitable for other use
+/// cases.
 ///
-/// It implements traits such as `Vertices` and `Edges`, and provides methods
-/// such as `max_arity` that return information specific to the graph
+/// It uses shared pointers to point to its children. Each shared pointer
+/// contains a reference to the child `Tree` object and a boolean flag that
+/// determines the direction of the connecting edge.
+///
+/// Also it implements traits such as `Vertices` and `Edges`, and provides
+/// methods such as `max_arity` that return information specific to the graph
 /// interpretation of the data structure.
-///
-/// `Tree` uses shared pointers to point to its children to decrease memory
-/// consumption. Each shared pointer contains a reference to the child `Tree`
-/// object and a boolean flag that determines the direction of the connecting
-/// edge.
 #[derive(Clone, Debug, PartialOrd, PartialEq)]
 pub struct Tree {
     /// The total number of vertices in the tree.
