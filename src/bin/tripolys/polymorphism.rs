@@ -4,14 +4,11 @@ use csv::WriterBuilder;
 use rayon::prelude::*;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
+use tripolys::algebra::Identities;
+use tripolys::algebra::Polymorphism;
 use tripolys::csp::Stats;
-// use tripolys::graph::formats::{edge_list, from_edge_list};
 use tripolys::graph::utils::{edge_list, parse_edge_list};
 use tripolys::graph::AdjList;
-
-use std::str::FromStr;
-
-use tripolys::algebra::{Condition, MetaProblem};
 
 use crate::{parse_graph, print_stats, CmdResult};
 
@@ -64,12 +61,12 @@ pub fn cli() -> App<'static, 'static> {
                 .help("Name of the condition the polymorphism must satisfy [see all conditions with --list]")
                 .required_unless("list"),
         )
-        .arg(
-            Arg::with_name("level-wise")
-                .short("L")
-                .long("level-wise")
-                .help("Test for level-wise satisfiability"),
-        )
+        // .arg(
+        //     Arg::with_name("level-wise")
+        //         .short("L")
+        //         .long("level-wise")
+        //         .help("Test for level-wise satisfiability"),
+        // )
         .arg(
             Arg::with_name("graph")
                 .short("g")
@@ -121,16 +118,14 @@ pub fn command(args: &ArgMatches) -> CmdResult {
         return Ok(());
     }
 
-    let condition = Condition::from_str(args.value_of("condition").unwrap())?;
+    let condition = parse_condition(args.value_of("condition").unwrap())?;
     let conservative = args.is_present("conservative");
     let idempotent = args.is_present("idempotent");
-    let level_wise = args.is_present("level-wise");
     let no_stats = args.is_present("no-stats");
 
-    let polymorphism = MetaProblem::new(condition)
+    let polymorphism = Polymorphism::new(Identities::majority())
         .conservative(conservative)
-        .idempotent(idempotent)
-        .level_wise(level_wise);
+        .idempotent(idempotent);
 
     let filter = args.value_of("filter").map(|v| match v {
         "deny" => false,
@@ -140,7 +135,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
 
     if let Some(graph) = args.value_of("graph") {
         let h: AdjList<usize> = parse_graph(graph)?;
-        let mut problem = polymorphism.problem(&h)?;
+        let mut problem = polymorphism.meta_problem(&h);
 
         println!("\n> Checking for polymorphisms...");
 
@@ -175,7 +170,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
     let results: Vec<Record> = graphs
         .into_par_iter()
         .map(|h| {
-            let mut problem = polymorphism.problem(&h).unwrap();
+            let mut problem = polymorphism.meta_problem(&h);
             let found = problem.solution_exists();
             let graph = edge_list(h);
 
@@ -237,5 +232,40 @@ impl Serialize for Record {
         }
 
         state.end()
+    }
+}
+
+fn parse_condition(s: &str) -> Result<Identities, String> {
+    match &*s.to_ascii_lowercase() {
+        "majority" => Ok(Identities::majority()),
+        "siggers" => Ok(Identities::siggers()),
+        "kmm" => Ok(Identities::kmm()),
+        "wnu-2" => Ok(Identities::wnu2()),
+        "wnu-3" => Ok(Identities::wnu3()),
+        "wnu-4" => Ok(Identities::wnu4()),
+        "nu-3" => Ok(Identities::nu3()),
+        "nu-4" => Ok(Identities::nu4()),
+        "nu-5" => Ok(Identities::nu5()),
+        "nu-6" => Ok(Identities::nu6()),
+        // "j" => Ok(Identities::jonsson()),
+        "maltsev" => Ok(Identities::hm1()),
+        // "kk" => Ok(Identities::KearnesKiss(pr)),
+        // "homck" => Ok(Identities::HobbyMcKenzie(pr)),
+        // "nn" => Ok(Identities::NoName(pr)),
+        // "ts" => Ok(Identities::TotallySymmetric(pr)),
+        // _ => {
+        //     if let Some((pr, su)) = s.split_once('-') {
+        //         if let Ok(pr) = pr.parse() {
+        //             match su {
+        //                 &_ => Err("unknown Condition, cannot convert from str".to_owned()),
+        //             }
+        //         } else {
+        //             Err("unknown Condition, cannot convert from str".to_owned())
+        //         }
+        //     } else {
+        //         Err("unknown Condition, cannot convert from str".to_owned())
+        //     }
+        // }
+        _ => Err("unknown Condition, cannot convert from str".to_owned()),
     }
 }

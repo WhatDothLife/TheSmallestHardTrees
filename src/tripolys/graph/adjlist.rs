@@ -1,6 +1,6 @@
-use std::hash::Hash;
+use std::{hash::Hash, iter::Cloned};
 
-use indexmap::{IndexMap, IndexSet};
+use indexmap::{map::Keys, IndexMap, IndexSet};
 
 use super::traits::*;
 
@@ -81,7 +81,7 @@ impl<V: Hash + Clone + Eq> Vertices for AdjList<V> {
     }
 
     fn vertices(&self) -> Self::VertexIter<'_> {
-        VertexIter(Box::new(self.lists.keys().cloned()))
+        VertexIter(self.lists.keys().cloned())
     }
 }
 
@@ -152,10 +152,11 @@ impl<V: Hash + Clone + Eq> FromIterator<(V, V)> for AdjList<V> {
     }
 }
 
-pub struct VertexIter<'a, V>(pub(crate) Box<dyn Iterator<Item = V> + 'a>);
+#[derive(Clone)]
+pub struct VertexIter<'a, V>(Cloned<Keys<'a, V, Neighbors<V>>>);
 
-impl<'a, T> Iterator for VertexIter<'a, T> {
-    type Item = T;
+impl<'a, V: Clone> Iterator for VertexIter<'a, V> {
+    type Item = V;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
