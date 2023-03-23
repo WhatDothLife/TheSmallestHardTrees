@@ -115,44 +115,60 @@ impl Vertices for Tree {
     }
 }
 
-fn edges(tree: &Tree) -> Vec<(usize, usize)> {
-    fn inner(id: &mut usize, tree: &Tree, edges: &mut Vec<(usize, usize)>) {
-        let id_parent = *id;
-
-        for (child, dir) in &tree.children {
-            *id += 1;
-
-            if *dir {
-                edges.push((id_parent, *id));
-            } else {
-                edges.push((*id, id_parent));
-            }
-            inner(id, child, edges);
-        }
-    }
-
-    let mut id = 0;
-    let mut edges = Vec::new();
-    inner(&mut id, tree, &mut edges);
-
-    edges
+#[derive(Default)]
+pub struct EdgeIt<'a> {
+    node_index: usize,
+    last_index: usize,
+    children: &'a [(Arc<Tree>, bool)],
+    parent: Option<Box<EdgeIt<'a>>>,
 }
 
-pub struct EdgeIter(std::vec::IntoIter<(usize, usize)>);
-
-impl Iterator for EdgeIter {
+impl Iterator for EdgeIt<'_> {
     type Item = (usize, usize);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.0.next()
+        match self.children.get(0) {
+            None => match self.parent.take() {
+                Some(mut parent) => {
+                    // continue with the parent node
+                    parent.last_index = self.last_index;
+                    *self = *parent;
+                    self.next()
+                }
+                None => None,
+            },
+            Some((tree, direction)) => {
+                self.children = &self.children[1..];
+                let next_index = self.last_index + 1;
+
+                let edge = if *direction {
+                    (self.node_index, next_index)
+                } else {
+                    (next_index, self.node_index)
+                };
+                // start iterating the child trees
+                *self = EdgeIt {
+                    children: tree.children.as_slice(),
+                    parent: Some(Box::new(std::mem::take(self))),
+                    node_index: next_index,
+                    last_index: next_index,
+                };
+                Some(edge)
+            }
+        }
     }
 }
 
 impl Edges for Tree {
-    type EdgeIter<'a> = EdgeIter;
+    type EdgeIter<'a> = EdgeIt<'a>;
 
     fn edges(&self) -> Self::EdgeIter<'_> {
-        EdgeIter(edges(self).into_iter())
+        EdgeIt {
+            node_index: 0,
+            last_index: 0,
+            children: &self.children,
+            parent: None,
+        }
     }
 
     fn edge_count(&self) -> usize {
@@ -266,5 +282,36 @@ impl std::fmt::Display for Tree {
         }
 
         write!(f, "{s}")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_edges() {
+        let t_left = Tree::from_iter([
+            (Arc::new(Tree::leaf()), true),
+            (Arc::new(Tree::leaf()), true),
+            (Arc::new(Tree::leaf()), false),
+        ]);
+        let t_right = Tree::from_iter([
+            (Arc::new(Tree::leaf()), false),
+            (Arc::new(Tree::leaf()), true),
+            (Arc::new(Tree::leaf()), false),
+        ]);
+        let t = Tree::from_iter([(Arc::new(t_left), true), (Arc::new(t_right), false)]);
+        let t_edges = vec![
+            (0, 1),
+            (1, 2),
+            (1, 3),
+            (4, 1),
+            (5, 0),
+            (6, 5),
+            (5, 7),
+            (8, 5),
+        ];
+        assert_eq!(t.edges().collect::<Vec<_>>(), t_edges);
     }
 }
