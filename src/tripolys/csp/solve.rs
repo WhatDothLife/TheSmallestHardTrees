@@ -40,18 +40,27 @@ pub struct Stats {
     pub mac3_time: Duration,
 }
 
+/// The Revision enum is used as a result of the revise routine.
+///
+/// * `Unchanged` - No domain was changed.
+/// * `Changed` - Some domains was changed.
+/// * `Empty` - Some domain is empty.
+#[derive(Copy, Clone, Debug)]
 enum Revision {
     Unchanged,
     Changed,
     Empty,
 }
 
+/// Checks the consistency of a constraint satisfaction problem (CSP) by
+/// examining a pair of variables. It removes values from the domain of `x`  so
+/// that it satisfies the constraints with respect to the other variable.
 fn revise<C: Constraints>(
     x: Var,
     y: Var,
     domains: &mut Vec<Domain<Value>>,
     constraints: &C,
-    mut trail: Option<&mut Vec<Var>>,
+    mut trail: Option<&mut Vec<Var>>, // If presents records variables whose domain was changed
     stats: &mut Stats,
 ) -> Revision {
     let mut revision = Revision::Unchanged;
