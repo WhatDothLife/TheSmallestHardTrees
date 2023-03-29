@@ -30,6 +30,7 @@ pub trait IterAlgebra: Iterator {
     }
 }
 
+#[derive(Clone)]
 pub struct KProduct<I>
 where
     I: Iterator + Clone,

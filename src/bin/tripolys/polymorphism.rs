@@ -123,7 +123,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
     let idempotent = args.is_present("idempotent");
     let no_stats = args.is_present("no-stats");
 
-    let polymorphism = Polymorphism::new(Identities::majority())
+    let polymorphism = Polymorphism::new(condition)
         .conservative(conservative)
         .idempotent(idempotent);
 
@@ -240,32 +240,26 @@ fn parse_condition(s: &str) -> Result<Identities, String> {
         "majority" => Ok(Identities::majority()),
         "siggers" => Ok(Identities::siggers()),
         "kmm" => Ok(Identities::kmm()),
-        "wnu-2" => Ok(Identities::wnu2()),
-        "wnu-3" => Ok(Identities::wnu3()),
-        "wnu-4" => Ok(Identities::wnu4()),
-        "nu-3" => Ok(Identities::nu3()),
-        "nu-4" => Ok(Identities::nu4()),
-        "nu-5" => Ok(Identities::nu5()),
-        "nu-6" => Ok(Identities::nu6()),
-        // "j" => Ok(Identities::jonsson()),
-        "maltsev" => Ok(Identities::hm1()),
-        // "kk" => Ok(Identities::KearnesKiss(pr)),
-        // "homck" => Ok(Identities::HobbyMcKenzie(pr)),
-        // "nn" => Ok(Identities::NoName(pr)),
-        // "ts" => Ok(Identities::TotallySymmetric(pr)),
-        // _ => {
-        //     if let Some((pr, su)) = s.split_once('-') {
-        //         if let Ok(pr) = pr.parse() {
-        //             match su {
-        //                 &_ => Err("unknown Condition, cannot convert from str".to_owned()),
-        //             }
-        //         } else {
-        //             Err("unknown Condition, cannot convert from str".to_owned())
-        //         }
-        //     } else {
-        //         Err("unknown Condition, cannot convert from str".to_owned())
-        //     }
-        // }
-        _ => Err("unknown Condition, cannot convert from str".to_owned()),
+        _ => {
+            if let Some((pr, su)) = s.split_once('-') {
+                if let Ok(pr) = pr.parse() {
+                    match su {
+                        "wnu" => Ok(Identities::wnu(pr)),
+                        "nu" => Ok(Identities::nu(pr)),
+                        "j" => Ok(Identities::jonsson(pr)),
+                        "hami" => Ok(Identities::hagemann_mitschke(pr)),
+                        "kk" => Ok(Identities::kearnes_kiss(pr)),
+                        "homck" => Ok(Identities::hobby_mckenzie(pr)),
+                        "nn" => Ok(Identities::no_name(pr)),
+                        "ts" => Ok(Identities::totally_symmetric(pr)),
+                        &_ => Err("unknown Condition, cannot convert from str".to_owned()),
+                    }
+                } else {
+                    Err("unknown Condition, cannot convert from str".to_owned())
+                }
+            } else {
+                Err("unknown Condition, cannot convert from str".to_owned())
+            }
+        }
     }
 }
