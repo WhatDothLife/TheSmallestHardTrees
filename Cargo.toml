@@ -13,7 +13,6 @@ colored = "2.0.0"
 csv = "1.1.6"
 indexmap = "1.9.2"
 itertools = "0.10.1"
-petgraph = "0.6.2"
 rayon = "1.5"
 serde = { version = "1.0", features = ["derive", "rc"]}
 
