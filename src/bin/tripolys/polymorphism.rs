@@ -12,7 +12,7 @@ use tripolys::graph::AdjList;
 
 use crate::{parse_graph, print_stats, CmdResult};
 
-const AVAILABLE_CONDITIONS: [&str; 9] = [
+const AVAILABLE_CONDITIONS: [&str; 10] = [
     "majority    majority",
     "k-nu        k-ary near-unamity",
     "k-wnu       k-ary weak near-unamity",
@@ -22,7 +22,7 @@ const AVAILABLE_CONDITIONS: [&str; 9] = [
     "n-homck     Hobby-McKenzie chain of length n",
     "n-hami      Hagemann-Mitschke chain of length n",
     "n-ts        Totally symmetric of arity n",
-    // "siggers     Siggers (consider testing for kmm, it is faster)",
+    "siggers     siggers",
 ];
 
 pub fn cli() -> App<'static, 'static> {
@@ -61,12 +61,6 @@ pub fn cli() -> App<'static, 'static> {
                 .help("Name of the condition the polymorphism must satisfy [see all conditions with --list]")
                 .required_unless("list"),
         )
-        // .arg(
-        //     Arg::with_name("level-wise")
-        //         .short("L")
-        //         .long("level-wise")
-        //         .help("Test for level-wise satisfiability"),
-        // )
         .arg(
             Arg::with_name("graph")
                 .short("g")
