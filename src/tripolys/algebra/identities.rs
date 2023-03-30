@@ -1,12 +1,11 @@
 use super::iteralgebra::IterAlgebra;
+use super::levels;
 
 use crate::graph::traits::{Contract, Edges, Vertices};
-use crate::graph::utils::levels;
 use crate::graph::AdjList;
 
 use indexmap::IndexSet;
 use itertools::Itertools;
-use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
