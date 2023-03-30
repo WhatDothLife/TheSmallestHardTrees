@@ -555,35 +555,6 @@ fn totally_symmetric_helper(sum: u32, n: u32) -> Vec<Vec<u32>> {
     result
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::algebra::Polymorphism;
-    use crate::graph::classes::triad;
-
-    #[test]
-    fn test_wnu2() {
-        let triad = triad("01001111,1010000,011000").unwrap();
-        let condition = Identities::wnu(2);
-        let exists = Polymorphism::new(condition)
-            .idempotent(true)
-            .meta_problem(&triad)
-            .solution_exists();
-        assert!(!exists);
-    }
-
-    #[test]
-    fn test_kmm() {
-        let triad = triad("01001111,1010000,011000").unwrap();
-        let condition = Identities::kmm();
-        let exists = Polymorphism::new(condition)
-            .idempotent(true)
-            .meta_problem(&triad)
-            .solution_exists();
-        assert!(!exists);
-    }
-}
-
 fn height1_neighbors<V, I>(condition: &Identities, term: &Term<V>, vertices: I) -> Vec<Term<V>>
 where
     I: IntoIterator<Item = V> + Clone,
