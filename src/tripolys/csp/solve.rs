@@ -155,7 +155,7 @@ pub fn solve<C>(
 
     trace!("  > Solving with MAC-3");
     let t_start = Instant::now();
-    solve_recursive(domains, constraints, stats, out, stop_at_first);
+    solve_iterative(domains, constraints, stats, out, stop_at_first);
     let t_end = t_start.elapsed();
     stats.mac3_time = t_end;
 }
@@ -248,5 +248,75 @@ where
 fn debug_print(domains: &Vec<Domain<Value>>) {
     for (i, d) in domains.iter().enumerate() {
         println!("{:?} -> {:?}", i, d.iter().collect::<Vec<_>>());
+    }
+}
+
+fn solve_iterative<C>(
+    domains: &mut Vec<Domain<Value>>,
+    constraints: &C,
+    stats: &mut Stats,
+    mut out: impl FnMut(Vec<Value>),
+    stop_at_first: bool,
+) where
+    C: Constraints,
+{
+    let variables: Vec<Var> = (0..domains.len())
+        .sorted_by_key(|&x| (domains[x].size() as isize).neg())
+        .collect();
+    let mut assignments = vec![0; domains.len()];
+    let mut states: Vec<Vec<Var>> = Vec::new();
+    let mut index = 0;
+
+    loop {
+        if index == variables.len() {
+            // We have a solution
+            let solution = domains.iter().map(|d| d[0]).collect();
+            trace!("==> Valid solution: {:?}", solution);
+            stats.solutions += 1;
+            out(solution);
+
+            if stop_at_first {
+                break;
+            }
+            index -= 1;
+        }
+
+        let x = variables[index];
+        let a = assignments[index];
+
+        if a == domains[x].size() {
+            trace!("    - Every assigment for {} failed, backtracking...", x);
+            if index == 0 {
+                // Search space exhausted
+                break;
+            }
+            let trail = states.pop().unwrap();
+            for x in trail {
+                domains[x].restore_state();
+            }
+            assignments[index] = 0;
+            index -= 1;
+            continue;
+        }
+
+        trace!("    - Assignment: {} -> {}", x, a);
+        let mut trail = vec![];
+        // domains[x].save_state();
+        domains[x].assign(a);
+        stats.assignments += 1;
+        assignments[index] = a + 1;
+
+        // Propagate the assignment
+        if mac_3(x, domains, constraints, &mut trail, stats) {
+            trace!("    - Consistency established...");
+            states.push(trail);
+            index += 1;
+        } else {
+            trace!("    - Inconsistency detected, backtracking...");
+            // backtrack
+            for x in trail {
+                domains[x].restore_state();
+            }
+        }
     }
 }
