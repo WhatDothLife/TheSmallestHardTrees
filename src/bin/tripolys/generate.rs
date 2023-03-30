@@ -86,10 +86,10 @@ pub fn command(args: &ArgMatches) -> CmdResult {
             println!("    - {: <20} {:?}", "#ac calls:", num_ac_calls);
         }
         if let Some(time_ac_call) = stats.time_ac_call {
-            println!("    - {: <20} {:?}", "t(ac call):", time_ac_call);
+            println!("    - {: <20} {:.1?}", "t(ac call):", time_ac_call);
         }
         println!("    - {: <20} {:?}", "#trees:", stats.num_trees);
-        println!("    - {: <20} {:?}", "t(total):", stats.time_total);
+        println!("    - {: <20} {:.1?}", "t(total):", stats.time_total);
 
         if !no_write {
             let dir = data_path.join(dir_name(n));

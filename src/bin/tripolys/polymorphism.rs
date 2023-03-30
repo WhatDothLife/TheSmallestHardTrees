@@ -217,11 +217,11 @@ impl Serialize for Record {
 
         if let Some(stats) = self.stats {
             state.serialize_field("backtracks", &stats.backtracks)?;
-            state.serialize_field("ac3_time", &format!("{:?}", stats.ac3_time))?;
-            state.serialize_field("mac3_time", &format!("{:?}", stats.mac3_time))?;
+            state.serialize_field("ac3_time", &format!("{:.1?}", stats.ac3_time))?;
+            state.serialize_field("mac3_time", &format!("{:.1?}", stats.mac3_time))?;
             state.serialize_field(
                 "total_time",
-                &format!("{:?}", stats.mac3_time + stats.ac3_time),
+                &format!("{:.1?}", stats.mac3_time + stats.ac3_time),
             )?;
         }
 
