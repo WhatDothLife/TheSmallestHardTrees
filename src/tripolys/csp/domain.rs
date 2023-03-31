@@ -177,38 +177,20 @@ mod tests {
         domain[0] = 4;
         assert_eq!(domain[0], 4);
     }
+
+    #[test]
+    fn test_debug_domain() {
+        let mut domain = Domain::from_iter(vec![1, 2, 3]);
+        for i in 0..domain.size() {
+            dbg!(i);
+            dbg!(&domain);
+            domain.save_state();
+            dbg!(&domain);
+            domain.assign(i);
+            dbg!(&domain);
+            domain.swap_remove(0);
+            dbg!(&domain);
+            domain.restore_state();
+        }
+    }
 }
-
-// #[derive(Clone, Debug)]
-// pub struct Domains<T> {
-//     domains: Vec<Domain<T>>,
-//     trail: Vec<Var>,
-//     states: Vec<usize>,
-// }
-
-// impl<T> Domains<T> {
-//     pub fn remove_value(&mut self, x: Var, index: usize) {
-//         let dom_x = &mut self.domains[x];
-
-//         if !dom_x.is_modified() {
-//             dom_x.save_state();
-//             self.trail.push(x);
-//         }
-//         dom_x.swap_remove(index);
-//     }
-
-//     pub fn assign(&mut self, x: Var, index: usize) {
-//         self.domains[x].save_state();
-//         self.domains[x].assign(index);
-//         self.states.push(self.trail.len());
-//         self.trail.push(x);
-//     }
-
-//     pub fn backtrack(&mut self) {
-//         let last_state = self.states.pop().expect("No state saved");
-
-//         for x in self.trail.drain(last_state..) {
-//             self.domains[x].restore_state();
-//         }
-//     }
-// }
