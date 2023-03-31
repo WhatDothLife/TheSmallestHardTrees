@@ -13,7 +13,7 @@ use std::iter::zip;
 use std::str::FromStr;
 
 /// Represents a term of the form f(x,y,..,z).
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+#[derive(Clone, Hash, Eq, PartialEq)]
 pub struct Term<T> {
     symbol: String,
     arguments: Vec<T>,
@@ -93,6 +93,16 @@ impl FromStr for Term<char> {
         let (symbol, rest) = s.trim().split_once('(').ok_or("Invalid term format")?;
         let args = rest.trim_end_matches(')').chars();
         Ok(Term::new(symbol, args))
+    }
+}
+impl<T: Debug> Debug for Term<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}({:?})",
+            self.symbol,
+            self.arguments.iter().format(",")
+        )
     }
 }
 
