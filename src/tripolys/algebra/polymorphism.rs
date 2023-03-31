@@ -110,23 +110,6 @@ mod tests {
     }
 
     #[test]
-    fn test_nl_hard() {
-        let graph = AdjList::from_edges([
-            (0, 1),
-            (1, 2),
-            (2, 3),
-            (3, 4),
-            (5, 6),
-            (6, 7),
-            (5, 8),
-            (8, 9),
-            (9, 10),
-            (10, 11),
-            (2, 7),
-        ]);
-    }
-
-    #[test]
     fn test_not_solved_by_ac() {
         let graph = AdjList::from_edges([
             (0, 1),
@@ -174,10 +157,32 @@ mod tests {
             (14, 15),
             (13, 6),
         ]);
-        let majority_exists = Polymorphism::new(Identities::majority()).exists(&graph);
-        assert!(!majority_exists);
+        let majority = Polymorphism::new(Identities::majority()).exists(&graph);
+        assert!(!majority);
 
-        let kk5_exists = Polymorphism::new(Identities::kearnes_kiss(5)).exists(&graph);
-        assert!(kk5_exists);
+        let homck2 = Polymorphism::new(Identities::hobby_mckenzie(2)).exists(&graph);
+        assert!(homck2);
+
+        let kk5 = Polymorphism::new(Identities::kearnes_kiss(5)).exists(&graph);
+        assert!(kk5);
     }
+
+    // #[test]
+    // fn test_nl_hard() {
+    //     let graph = AdjList::from_edges([
+    //         (0, 1),
+    //         (1, 2),
+    //         (3, 2),
+    //         (3, 4),
+    //         (4, 5),
+    //         (6, 0),
+    //         (6, 7),
+    //         (8, 7),
+    //         (9, 8),
+    //         (8, 10),
+    //         (10, 11),
+    //     ]);
+    //     let hami = Polymorphism::new(Identities::hagemann_mitschke(8)).exists(&graph);
+    //     assert!(hami);
+    // }
 }
