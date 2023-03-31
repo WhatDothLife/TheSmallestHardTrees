@@ -76,9 +76,9 @@ To reproduce the result, run the following sequence of commands:
 
 ```
 cd data/20
-tripolys polymorphism -i cores.edges -o 2-wnu_deny.csv -c 2-wnu -L -f deny
-tripolys polymorphism -i 2-wnu_deny.csv -o 3-wnu_deny.csv -c 3-wnu -L -f deny
-tripolys polymorphism -i 3-wnu_deny.csv -o kmm_deny.csv -c kmm -L -f deny
+tripolys polymorphism -i cores.edges -o 2-wnu_deny.csv -c 2-wnu -f deny
+tripolys polymorphism -i 2-wnu_deny.csv -o 3-wnu_deny.csv -c 3-wnu -f deny
+tripolys polymorphism -i 3-wnu_deny.csv -o kmm_deny.csv -c kmm -f deny
 ```
 
 We also found the smallest NP-hard triads: (TODO link edge lists here?)
@@ -89,8 +89,8 @@ tripolys generate -s 4 -e 22 --core --triad
 ```
 
 ```
-tripolys polymorphism -g 10110000,0101111,100111 -c kmm -L
-tripolys polymorphism -g 10110000,1001111,010111 -c kmm -L
+tripolys polymorphism -g 10110000,0101111,100111 -c kmm
+tripolys polymorphism -g 10110000,1001111,010111 -c kmm
 ```
 
 
@@ -119,7 +119,7 @@ and this is how you can test them:
 
 ```
 cd data/16
-tripolys polymorphism -i cores.edges -o majority_deny.csv -c majority -L -f deny
+tripolys polymorphism -i cores.edges -o majority_deny.csv -c majority -f deny
 ```
 
 (TODO how to run the tests for KK, HMcK, J?)
