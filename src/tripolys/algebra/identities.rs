@@ -387,39 +387,32 @@ fn hobby_mckenzie(n: u32) -> String {
     // d0(x,y,z) = x
     let mut result = String::from("d(xyz)=x\n");
 
-    // d_i(x,y,y) = d_{i+1}(x,y,y) for even i < n
     for i in (0..n).step_by(2) {
+        // d_i(x,y,y) = d_{i+1}(x,y,y) for even i < n
         result.push_str(&format!("d{}(xyy)=d{}(xyy)\n", i, i + 1));
     }
 
-    // d_i(x,x,y) = d_{i+1}(x,x,y) for odd i < n
     for i in (1..n).step_by(2) {
+        // d_i(x,x,y) = d_{i+1}(x,x,y) for odd i < n
         result.push_str(&format!("d{}(xxy)=d{}(xxy)\n", i, i + 1));
-    }
-
-    // d_i(x,y,x) = d_{i+1}(x,y,x) for odd i < n
-    for i in (1..n).step_by(2) {
+        // d_i(x,y,x) = d_{i+1}(x,y,x) for odd i < n
         result.push_str(&format!("d{}(xyx)=d{}(xyx)\n", i, i + 1));
     }
 
     // d_n(x,y,y) = p(x,y,y)
     result.push_str(&format!("d{}(xyy)=p(xyy)\n", n));
-
     // p(x,x,y) = e₀(x,x,y)
     result.push_str(&format!("p(xxy)=e{}(xxy)\n", 0));
-
-    // e_i(x,y,y) = e_{i+1}(x,y,y) for even i < n
-    for i in (0..n).step_by(2) {
-        result.push_str(&format!("e{}(xyy)=e{}(xyy)\n", i, i + 1));
-    }
 
     // e_i(x,x,y) = e_{i+1}(x,x,y) for odd i < n
     for i in (1..n).step_by(2) {
         result.push_str(&format!("e{}(xxy)=e{}(xxy)\n", i, i + 1));
     }
 
-    // e_i(x,y,x) = e_{i+1}(x,y,x) for even i < n
     for i in (0..n).step_by(2) {
+        // e_i(x,y,y) = e_{i+1}(x,y,y) for even i < n
+        result.push_str(&format!("e{}(xyy)=e{}(xyy)\n", i, i + 1));
+        // e_i(x,y,x) = e_{i+1}(x,y,x) for even i < n
         result.push_str(&format!("e{}(xyx)=e{}(xyx)\n", i, i + 1));
     }
 
