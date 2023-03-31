@@ -263,6 +263,7 @@ impl Identities {
     condition!(g3, "f(aaxyz)=f(bbxyz)=f(xaayz)=f(yaxaz)=f(zaxya)");
     condition!(gs3, "f(xxxx)=f(xxxy)", "f((123x)=f(231x)");
 
+    /// f (y,x,x,…,x,x) = f (x,y,x,…,x,x) = … = f (x,x,x,…,x,y)
     pub fn wnu(k: u32) -> Identities {
         Identities::parse(&weak_near_unamity(k)).unwrap()
     }
