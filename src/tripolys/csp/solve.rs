@@ -261,14 +261,15 @@ fn solve_iterative<C>(
     C: Constraints,
 {
     let variables: Vec<Var> = (0..domains.len())
-        .sorted_by_key(|&x| (domains[x].size() as isize).neg())
+        .sorted_by_key(|&x| domains[x].size())
         .collect();
+    let x = variables[0];
     let mut assignments = vec![0; domains.len()];
     let mut states: Vec<Vec<Var>> = Vec::new();
-    let mut index = 0;
+    let mut depth = 0;
 
     loop {
-        if index == variables.len() {
+        if depth == variables.len() {
             // We have a solution
             let solution = domains.iter().map(|d| d[0]).collect();
             trace!("==> Valid solution: {:?}", solution);
@@ -278,15 +279,15 @@ fn solve_iterative<C>(
             if stop_at_first {
                 break;
             }
-            index -= 1;
+            depth -= 1;
         }
 
-        let x = variables[index];
-        let a = assignments[index];
+        let x = variables[depth];
+        let a = assignments[depth];
 
         if a == domains[x].size() {
-            trace!("    - Every assigment for {} failed, backtracking...", x);
-            if index == 0 {
+            trace!("    - Tried every assigment for {}, backtracking...", x);
+            if depth == 0 {
                 // Search space exhausted
                 break;
             }
@@ -294,26 +295,26 @@ fn solve_iterative<C>(
             for x in trail {
                 domains[x].restore_state();
             }
-            assignments[index] = 0;
-            index -= 1;
+            assignments[depth] = 0;
+            depth -= 1;
+            stats.backtracks += 1;
             continue;
         }
 
         trace!("    - Assignment: {} -> {}", x, a);
-        let mut trail = vec![];
-        // domains[x].save_state();
+        domains[x].save_state();
         domains[x].assign(a);
         stats.assignments += 1;
-        assignments[index] = a + 1;
+        assignments[depth] = a + 1;
 
+        let mut trail = vec![x];
         // Propagate the assignment
         if mac_3(x, domains, constraints, &mut trail, stats) {
-            trace!("    - Consistency established...");
+            trace!("    - Forward check succeeded");
             states.push(trail);
-            index += 1;
+            depth += 1;
         } else {
-            trace!("    - Inconsistency detected, backtracking...");
-            // backtrack
+            trace!("    - Forward check failed");
             for x in trail {
                 domains[x].restore_state();
             }
