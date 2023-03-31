@@ -756,22 +756,22 @@ mod tests {
         assert!(kk5);
     }
 
-    // #[test]
-    // fn test_nl_hard() {
-    //     let graph = AdjList::from_edges([
-    //         (0, 1),
-    //         (1, 2),
-    //         (3, 2),
-    //         (3, 4),
-    //         (4, 5),
-    //         (6, 0),
-    //         (6, 7),
-    //         (8, 7),
-    //         (9, 8),
-    //         (8, 10),
-    //         (10, 11),
-    //     ]);
-    //     let hami = Polymorphism::new(Identities::hagemann_mitschke(8)).exists(&graph);
-    //     assert!(hami);
-    // }
+    #[test]
+    fn test_nl_hard() {
+        let graph = AdjList::from_edges([
+            (0, 1),
+            (1, 2),
+            (3, 2),
+            (3, 4),
+            (4, 5),
+            (6, 0),
+            (6, 7),
+            (8, 7),
+            (9, 8),
+            (8, 10),
+            (10, 11),
+        ]);
+        let hami = Identities::hagemann_mitschke(8).exists(&graph);
+        assert!(hami);
+    }
 }
