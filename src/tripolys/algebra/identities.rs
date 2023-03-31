@@ -151,7 +151,6 @@ fn level_wise<V: Copy + Hash + Eq>(lhs: &Term<V>, rhs: &Term<V>) -> bool {
 
 fn parse(s: &str) -> Result<Identities, String> {
     let mut operations = HashMap::new();
-    // let mut variables = HashSet::new();
     let mut non_h1 = Vec::new();
     let mut h1: Vec<(Term<char>, Term<char>)> = Vec::new();
 
