@@ -12,16 +12,16 @@ use tripolys::graph::AdjList;
 
 use crate::{parse_graph, print_stats, CmdResult};
 
-const AVAILABLE_CONDITIONS: [&str; 5] = [
+const AVAILABLE_CONDITIONS: [&str; 10] = [
     "majority    majority",
     "k-nu        k-ary near-unamity",
     "k-wnu       k-ary weak near-unamity",
     "kmm         Kearnes-Marković-McKenzie",
-    // "n-j         Jónsson chain of length n",
-    // "n-kk        Kearnes-Kiss chain of length n",
-    // "n-homck     Hobby-McKenzie chain of length n",
-    // "n-hami      Hagemann-Mitschke chain of length n",
-    // "n-ts        Totally symmetric of arity n",
+    "n-j         Jónsson chain of length n",
+    "n-kk        Kearnes-Kiss chain of length n",
+    "n-homck     Hobby-McKenzie chain of length n",
+    "n-hami      Hagemann-Mitschke chain of length n",
+    "n-ts        Totally symmetric of arity n",
     "siggers     siggers",
 ];
 
@@ -240,12 +240,12 @@ fn parse_condition(s: &str) -> Result<Identities, String> {
                     match su {
                         "wnu" => Ok(Identities::wnu(pr)),
                         "nu" => Ok(Identities::nu(pr)),
-                        // "j" => Ok(Identities::jonsson(pr)),
-                        // "hami" => Ok(Identities::hagemann_mitschke(pr)),
-                        // "kk" => Ok(Identities::kearnes_kiss(pr)),
-                        // "homck" => Ok(Identities::hobby_mckenzie(pr)),
-                        // "nn" => Ok(Identities::no_name(pr)),
-                        // "ts" => Ok(Identities::totally_symmetric(pr)),
+                        "j" => Ok(Identities::jonsson(pr)),
+                        "hami" => Ok(Identities::hagemann_mitschke(pr)),
+                        "kk" => Ok(Identities::kearnes_kiss(pr)),
+                        "homck" => Ok(Identities::hobby_mckenzie(pr)),
+                        "nn" => Ok(Identities::no_name(pr)),
+                        "ts" => Ok(Identities::totally_symmetric(pr)),
                         &_ => Err("unknown Condition, cannot convert from str".to_owned()),
                     }
                 } else {
