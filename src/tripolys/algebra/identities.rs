@@ -426,10 +426,10 @@ impl Identities {
 fn hagemann_mitschke_chain(n: u32) -> String {
     assert!(n > 0, "Hagemann-Mitschke is only defined for n > 0");
 
-    let mut result = String::from("p1(xyy)=x");
+    let mut result = String::from("p1(xyy)=x\n");
 
     for i in 1..n {
-        result.push_str(&format!(", p{}(xxy)=p{}(xyy)", i, i + 1));
+        result.push_str(&format!("p{}(xxy)=p{}(xyy)\n", i, i + 1));
     }
     result.push_str(&format!("p{n}(xxy)=y"));
 
