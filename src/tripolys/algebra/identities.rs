@@ -68,12 +68,10 @@ impl<T: Copy> Term<T> {
             return None;
         }
         let mut map = HashMap::new();
-        let mut set = HashSet::new();
 
         for (a, b) in zip(self.arguments(), other.arguments()) {
-            if !map.contains_key(a) && !set.contains(b) {
+            if !map.contains_key(a) {
                 map.insert(*a, *b);
-                set.insert(*b);
             } else if let Some(&val) = map.get(a) {
                 if val != *b {
                     return None;
