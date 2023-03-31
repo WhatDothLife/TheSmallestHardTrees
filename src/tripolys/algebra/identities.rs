@@ -1,11 +1,12 @@
 use super::iteralgebra::IterAlgebra;
 use super::levels;
 
+use crate::csp::Problem;
 use crate::graph::traits::{Contract, Edges, Vertices};
 use crate::graph::AdjList;
 
 use indexmap::IndexSet;
-use itertools::Itertools;
+use itertools::{chain, Itertools};
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
@@ -110,7 +111,7 @@ impl<T: Display> Display for Term<T> {
     }
 }
 
-/// A collection of linear identities.
+/// A system of linear identities.
 #[derive(Clone, Debug)]
 pub struct Identities {
     // Operation symbols and their arity
@@ -121,6 +122,8 @@ pub struct Identities {
     pub(crate) h1: Vec<(Term<char>, Term<char>)>,
     // Whether the identities can be satisfied level-wise
     pub(crate) level_wise: bool,
+    // Whether the polymorphisms must be conservative
+    pub(crate) conservative: bool,
 }
 
 fn print_identities(identities: &Identities) {
@@ -140,15 +143,15 @@ fn print_identities(identities: &Identities) {
     }
 }
 
-fn level_wise<V: Copy>(lhs: &Term<V>, rhs: &Term<V>) -> bool {
-    lhs.arguments().iter().count() == 2
-        && rhs.arguments().iter().count() == 2
-        && zip(lhs.arguments(), rhs.arguments()).count() == 2
+fn level_wise<V: Copy + Hash + Eq>(lhs: &Term<V>, rhs: &Term<V>) -> bool {
+    lhs.arguments().iter().unique().count() == 2
+        && rhs.arguments().iter().unique().count() == 2
+        && chain(lhs.arguments(), rhs.arguments()).unique().count() == 2
 }
 
 fn parse(s: &str) -> Result<Identities, String> {
     let mut operations = HashMap::new();
-    let mut variables = HashSet::new();
+    // let mut variables = HashSet::new();
     let mut non_h1 = Vec::new();
     let mut h1: Vec<(Term<char>, Term<char>)> = Vec::new();
 
@@ -165,7 +168,6 @@ fn parse(s: &str) -> Result<Identities, String> {
                 } else {
                     operations.insert(term.symbol().to_owned(), term.arity());
                 }
-                variables.extend(term.arguments().iter().copied());
                 terms.push(term);
             } else if let Some(c) = st.trim().chars().next() {
                 if let Some(d) = constant {
@@ -199,13 +201,20 @@ fn parse(s: &str) -> Result<Identities, String> {
         }
     }
 
-    let level_wise = variables.len() == 2 && h1.iter().all(|(lhs, rhs)| level_wise(lhs, rhs));
+    let level_wise = h1
+        .iter()
+        .flat_map(|(lhs, rhs)| chain(lhs.arguments(), rhs.arguments()))
+        .unique()
+        .count()
+        == 2
+        && h1.iter().all(|(lhs, rhs)| level_wise(lhs, rhs));
 
     Ok(Identities {
         ops: operations.into_iter().collect(),
         non_h1,
         h1,
         level_wise,
+        conservative: false,
     })
 }
 
@@ -259,10 +268,12 @@ impl Identities {
         Identities::parse(&weak_near_unamity(k)).unwrap()
     }
 
+    /// f (y,x,x,…,x,x) = f (x,y,x,…,x,x) = … = f (x,x,x,…,x,y) = x;
     pub fn nu(k: u32) -> Identities {
         Identities::parse(&near_unamity(k)).unwrap()
     }
 
+    /// f(x1,x2,…,xk) = f(x2,…,xk,x1)
     pub fn sigma(k: u32) -> Identities {
         Identities::parse(&sigma(k)).unwrap()
     }
@@ -325,6 +336,21 @@ impl Identities {
         ids
     }
 
+    pub fn conservative(mut self, flag: bool) -> Self {
+        self.conservative = flag;
+        self
+    }
+
+    pub fn idempotent(mut self, flag: bool) -> Self {
+        if flag {
+            for (symbol, arity) in &self.ops {
+                self.non_h1
+                    .push((Term::new(symbol, (0..*arity).map(|_| 'x')), 'x'));
+            }
+        }
+        self
+    }
+
     pub fn indicator_graph<V: Copy + Eq + Hash>(&self, graph: &AdjList<V>) -> AdjList<Term<V>> {
         let mut ind_edges: Vec<_> = self
             .ops
@@ -365,6 +391,35 @@ impl Identities {
         }
 
         ind_graph
+    }
+
+    pub fn meta_problem<V: Copy + Eq + Hash>(&self, h: &AdjList<V>) -> Problem<Term<V>, V> {
+        let indicator = self.indicator_graph(h);
+        let mut problem = Problem::new(&indicator, h);
+
+        for v in indicator.vertices() {
+            for (term, constant) in &self.non_h1 {
+                if let Some(bindings) = term.match_with(&v) {
+                    problem.precolor(v.clone(), *bindings.get(constant).unwrap());
+                }
+            }
+        }
+
+        if self.conservative {
+            for v in indicator.vertices() {
+                problem.set_list(v.clone(), v.arguments().to_vec());
+            }
+        }
+
+        problem
+    }
+
+    pub fn exists<V: Copy + Eq + Hash>(&self, h: &AdjList<V>) -> bool {
+        self.meta_problem(h).solution_exists()
+    }
+
+    pub fn find_all<V: Copy + Eq + Hash>(&self, h: &AdjList<V>) -> Vec<HashMap<Term<V>, V>> {
+        self.meta_problem(h).solve_all()
     }
 }
 
@@ -603,4 +658,121 @@ where
                 .collect()
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::algebra::Identities;
+    use crate::graph::classes::triad;
+
+    #[test]
+    fn test_np_hard() {
+        let triad: AdjList<_> = triad("01001111,1010000,011000").unwrap();
+        let graph = AdjList::from_edges([
+            (1, 0),
+            (1, 2),
+            (2, 3),
+            (4, 3),
+            (5, 4),
+            (6, 5),
+            (7, 0),
+            (8, 7),
+            (8, 9),
+            (9, 10),
+            (10, 11),
+            (11, 12),
+            (13, 0),
+            (13, 14),
+            (15, 14),
+            (15, 18),
+            (18, 19),
+            (16, 15),
+            (17, 16),
+        ]);
+        let wnu2 = Identities::wnu(2);
+        let wnu2_exists = wnu2.exists(&graph) || wnu2.exists(&triad);
+        assert!(!wnu2_exists);
+
+        let kmm = Identities::kmm();
+        let kmm_exists = kmm.exists(&graph) || kmm.exists(&triad);
+        assert!(!kmm_exists);
+    }
+
+    #[test]
+    fn test_not_solved_by_ac() {
+        let graph = AdjList::from_edges([
+            (0, 1),
+            (1, 2),
+            (2, 3),
+            (4, 5),
+            (5, 6),
+            (6, 7),
+            (8, 9),
+            (9, 10),
+            (11, 12),
+            (12, 13),
+            (13, 14),
+            (15, 16),
+            (16, 17),
+            (17, 18),
+            (8, 6),
+            (9, 3),
+            (15, 9),
+            (12, 10),
+        ]);
+        let majority_exists = Identities::majority().exists(&graph);
+        assert!(majority_exists);
+
+        let wnu2_exists = Identities::wnu(2).exists(&graph);
+        assert!(!wnu2_exists);
+    }
+
+    #[test]
+    fn test_not_known_to_be_in_nl() {
+        let graph = AdjList::from_edges([
+            (0, 1),
+            (1, 2),
+            (2, 3),
+            (3, 4),
+            (0, 5),
+            (5, 6),
+            (7, 8),
+            (8, 5),
+            (8, 9),
+            (9, 10),
+            (10, 11),
+            (12, 13),
+            (13, 14),
+            (14, 15),
+            (13, 6),
+        ]);
+        let majority = Identities::majority().exists(&graph);
+        assert!(!majority);
+
+        let homck2 = Identities::hobby_mckenzie(2).exists(&graph);
+        assert!(homck2);
+
+        let kk5 = Identities::kearnes_kiss(5).exists(&graph);
+        assert!(kk5);
+    }
+
+    // #[test]
+    // fn test_nl_hard() {
+    //     let graph = AdjList::from_edges([
+    //         (0, 1),
+    //         (1, 2),
+    //         (3, 2),
+    //         (3, 4),
+    //         (4, 5),
+    //         (6, 0),
+    //         (6, 7),
+    //         (8, 7),
+    //         (9, 8),
+    //         (8, 10),
+    //         (10, 11),
+    //     ]);
+    //     let hami = Polymorphism::new(Identities::hagemann_mitschke(8)).exists(&graph);
+    //     assert!(hami);
+    // }
 }

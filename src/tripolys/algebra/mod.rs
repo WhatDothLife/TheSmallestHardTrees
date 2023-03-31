@@ -2,9 +2,7 @@
 
 mod identities;
 mod iteralgebra;
-mod polymorphism;
 mod utils;
 
 pub use identities::*;
-pub use polymorphism::*;
 pub use utils::*;

@@ -5,7 +5,6 @@ use rayon::prelude::*;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 use tripolys::algebra::Identities;
-use tripolys::algebra::Polymorphism;
 use tripolys::csp::Stats;
 use tripolys::graph::utils::{edge_list, parse_edge_list};
 use tripolys::graph::AdjList;
@@ -112,12 +111,12 @@ pub fn command(args: &ArgMatches) -> CmdResult {
         return Ok(());
     }
 
-    let condition = parse_condition(args.value_of("condition").unwrap())?;
+    let no_stats = args.is_present("no-stats");
+    let condition = args.value_of("condition").unwrap();
     let conservative = args.is_present("conservative");
     let idempotent = args.is_present("idempotent");
-    let no_stats = args.is_present("no-stats");
 
-    let polymorphism = Polymorphism::new(condition)
+    let polymorphism = parse_condition(condition)?
         .conservative(conservative)
         .idempotent(idempotent);
 
