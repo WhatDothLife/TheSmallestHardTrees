@@ -1,8 +1,8 @@
 //! Concepts that are related to universal algebra.
 
-mod identities;
+mod polymorphism;
 mod iteralgebra;
 mod utils;
 
-pub use identities::*;
+pub use polymorphism::*;
 pub use utils::*;
