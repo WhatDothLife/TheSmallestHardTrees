@@ -7,7 +7,7 @@ use crate::graph::AdjList;
 
 use indexmap::IndexSet;
 use itertools::{chain, Itertools};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 use std::iter::zip;
@@ -111,9 +111,9 @@ impl<T: Display> Display for Term<T> {
     }
 }
 
-/// A system of linear identities.
+/// Operations D<sup>3</sup> → D that must satisfy a system of linear identities.
 #[derive(Clone, Debug)]
-pub struct Identities {
+pub struct Polymorphism {
     // Operation symbols and their arity
     pub(crate) ops: Vec<(String, usize)>,
     // Equations of the form f(x...z)=d
@@ -126,7 +126,7 @@ pub struct Identities {
     pub(crate) conservative: bool,
 }
 
-fn print_identities(identities: &Identities) {
+fn print_identities(identities: &Polymorphism) {
     println!("Operation-symbols:");
     for (symbol, arity) in &identities.ops {
         println!("{symbol}, arity: {arity}");
@@ -149,7 +149,7 @@ fn level_wise<V: Copy + Hash + Eq>(lhs: &Term<V>, rhs: &Term<V>) -> bool {
         && chain(lhs.arguments(), rhs.arguments()).unique().count() == 2
 }
 
-fn parse(s: &str) -> Result<Identities, String> {
+fn parse(s: &str) -> Result<Polymorphism, String> {
     let mut operations = HashMap::new();
     let mut non_h1 = Vec::new();
     let mut h1: Vec<(Term<char>, Term<char>)> = Vec::new();
@@ -208,7 +208,7 @@ fn parse(s: &str) -> Result<Identities, String> {
         == 2
         && h1.iter().all(|(lhs, rhs)| level_wise(lhs, rhs));
 
-    Ok(Identities {
+    Ok(Polymorphism {
         ops: operations.into_iter().collect(),
         non_h1,
         h1,
@@ -220,19 +220,20 @@ fn parse(s: &str) -> Result<Identities, String> {
 macro_rules! condition {
     ($name:ident, $($eq:expr),+ $(,)?) => {
         #[doc = concat!($(concat!("- ", $eq, "\n")),+)]
-        pub fn $name() -> Identities {
+        pub fn $name() -> Polymorphism {
             let equation = concat!($($eq, ",",)+);
-            Identities::parse(equation).unwrap()
+            Polymorphism::parse(equation).unwrap()
         }
     };
 }
 
-impl Identities {
+impl Polymorphism {
     pub fn parse(s: &str) -> Result<Self, String> {
         parse(s)
     }
 
     condition!(siggers, "s(area)=s(rare)");
+    condition!(maltsev, "f(xxy)=f(yxx)=y");
     condition!(majority, "m(xxy)=m(xyx)=m(yxx)=m(xxx)=x");
     condition!(kmm, "p(xyy)=q(yxx)=q(xxy)", "p(xyx)=q(xyx)");
     condition!(fs3, "f(xyz)=f(zxy)=f(yxz)");
@@ -264,25 +265,25 @@ impl Identities {
     condition!(gs3, "f(xxxx)=f(xxxy)", "f((123x)=f(231x)");
 
     /// f (y,x,x,…,x,x) = f (x,y,x,…,x,x) = … = f (x,x,x,…,x,y)
-    pub fn wnu(k: u32) -> Identities {
-        Identities::parse(&weak_near_unamity(k)).unwrap()
+    pub fn wnu(k: u32) -> Polymorphism {
+        Polymorphism::parse(&weak_near_unamity(k)).unwrap()
     }
 
     /// f (y,x,x,…,x,x) = f (x,y,x,…,x,x) = … = f (x,x,x,…,x,y) = x
-    pub fn nu(k: u32) -> Identities {
-        Identities::parse(&near_unamity(k)).unwrap()
+    pub fn nu(k: u32) -> Polymorphism {
+        Polymorphism::parse(&near_unamity(k)).unwrap()
     }
 
     /// f(x1,x2,…,xk) = f(x2,…,xk,x1)
-    pub fn sigma(k: u32) -> Identities {
-        Identities::parse(&sigma(k)).unwrap()
+    pub fn sigma(k: u32) -> Polymorphism {
+        Polymorphism::parse(&sigma(k)).unwrap()
     }
 
     /// - p<sub>1</sub>(x,y,y) = x
     /// - p<sub>i</sub>(x,x,y) = p<sub>i+1</sub>(x,y,y) for all i ∈ {1,…,n−1}
     /// - p<sub>n</sub>(x,x,y) = y.
-    pub fn hagemann_mitschke(n: u32) -> Identities {
-        Identities::parse(&hagemann_mitschke_chain(n)).unwrap()
+    pub fn hagemann_mitschke(n: u32) -> Polymorphism {
+        Polymorphism::parse(&hagemann_mitschke_chain(n)).unwrap()
     }
 
     /// - d<sub>0</sub> (x,y,z) ≈ x
@@ -290,16 +291,16 @@ impl Identities {
     /// - d<sub>i</sub> (x,y,x) ≈ d<sub>i+1</sub>(x,y,x)     for even i ∈ {0,1,…,n−1}
     /// - d<sub>i</sub> (x,x,y) ≈ d<sub>i+1</sub>(x,x,y)     for odd i ∈ {1,…, n − 1}
     /// - d<sub>n</sub> (x,y,z) ≈ z
-    pub fn kearnes_kiss(n: u32) -> Identities {
-        Identities::parse(&kearnes_kiss_chain(n)).unwrap()
+    pub fn kearnes_kiss(n: u32) -> Polymorphism {
+        Polymorphism::parse(&kearnes_kiss_chain(n)).unwrap()
     }
 
     /// - f<sub>0</sub>(x,y,y,z) ≈ x
     /// - f<sub>i</sub>(x,x,y,x) ≈ f<sub>i+1</sub> (x,y,y,x) for all i ∈ {0,…,n−1}
     /// - f<sub>i</sub>(x,x,y,y) ≈ f<sub>i+1</sub> (x,y,y,y) for all i ∈ {0,…,n−1}
     /// - f<sub>n</sub>(x,x,y,z) ≈ z.
-    pub fn no_name(n: u32) -> Identities {
-        Identities::parse(&no_name_chain(n)).unwrap()
+    pub fn no_name(n: u32) -> Polymorphism {
+        Polymorphism::parse(&no_name_chain(n)).unwrap()
     }
 
     /// - d<sub>0</sub>(x,y,z) = x
@@ -312,8 +313,8 @@ impl Identities {
     /// - e<sub>i</sub>(x,x,y) = e<sub>i+1</sub>(x,x,y)   for odd i < n
     /// - e<sub>i</sub>(x,y,x) = e<sub>i+1</sub>(x,y,x)   for even i < n
     /// - e<sub>n</sub>(x,y,z) = z.
-    pub fn hobby_mckenzie(n: u32) -> Identities {
-        Identities::parse(&hobby_mckenzie(n)).unwrap()
+    pub fn hobby_mckenzie(n: u32) -> Polymorphism {
+        Polymorphism::parse(&hobby_mckenzie(n)).unwrap()
     }
 
     /// - j<sub>1</sub>(x,x,y)    = x
@@ -321,12 +322,14 @@ impl Identities {
     /// - j<sub>i</sub>(x,y,x)    = x                         for all i ∈ {1,…,2n + 1}
     /// - j<sub>2i</sub>(x,x,y)   = j<sub>2i+1</sub>(x,x,y)   for all i ∈ {1,…,n}
     /// - j<sub>2n+1</sub>(x,y,y) = y.
-    pub fn jonsson(n: u32) -> Identities {
-        Identities::parse(&jonsson_chain(n)).unwrap()
+    pub fn jonsson(n: u32) -> Polymorphism {
+        Polymorphism::parse(&jonsson_chain(n)).unwrap()
     }
 
-    pub fn totally_symmetric(k: u32) -> Identities {
-        let mut ids = Identities::parse(&totally_symmetric(k)).unwrap();
+    /// f(x<sub>1</sub>,x<sub>2</sub>,…,x<sub>n</sub>) = f(y<sub>1</sub>,y<sub>2</sub>,…,y<sub>n</sub>)
+    /// where {y<sub>1</sub>,y<sub>2</sub>,…,y<sub>n</sub>} = {x<sub>1</sub>,x<sub>2</sub>,…,x<sub>n</sub>}
+    pub fn totally_symmetric(k: u32) -> Polymorphism {
+        let mut ids = Polymorphism::parse(&totally_symmetric(k)).unwrap();
         // NOTE: So far there is no characterization of linear identities that
         // can be satisfied level-wise. While parsing we only check for the case
         // where a h1-condition in two variables has both these variables appear
@@ -336,11 +339,13 @@ impl Identities {
         ids
     }
 
+    /// f(a<sub>1</sub>,…,a<sub>n</sub>) ∈ {a<sub>1</sub>,…,a<sub>n</sub>} for all a<sub>i</sub> ∈ D
     pub fn conservative(mut self, flag: bool) -> Self {
         self.conservative = flag;
         self
     }
 
+    /// f(a,a,…,a) = a
     pub fn idempotent(mut self, flag: bool) -> Self {
         if flag {
             for (symbol, arity) in &self.ops {
@@ -393,7 +398,22 @@ impl Identities {
         ind_graph
     }
 
-    pub fn meta_problem<V: Copy + Eq + Hash>(&self, h: &AdjList<V>) -> Problem<Term<V>, V> {
+    /// Obtains an instance of the graph homomorphism problem from the indicator
+    /// graph of `h` to `h`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tripolys::graph::AdjList;
+    /// use tripolys::graph::classes::triad;
+    /// use tripolys::algebra::Polymorphism;
+    ///
+    /// let triad: AdjList<_> = triad("01001111,1010000,011000").unwrap();
+    /// let problem = Polymorphism::kmm().problem(&triad);
+    ///
+    /// assert!(!problem.solution_exists());
+    /// ```
+    pub fn problem<V: Copy + Eq + Hash>(&self, h: &AdjList<V>) -> Problem<Term<V>, V> {
         let indicator = self.indicator_graph(h);
         let mut problem = Problem::new(&indicator, h);
 
@@ -414,12 +434,26 @@ impl Identities {
         problem
     }
 
+    /// Check if a polymorphism exists for the given graph `h`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tripolys::graph::AdjList;
+    /// use tripolys::graph::classes::triad;
+    /// use tripolys::algebra::Polymorphism;
+    ///
+    /// let triad: AdjList<_> = triad("01001111,1010000,011000").unwrap();
+    /// let exists = Polymorphism::kmm().exists(&triad);
+    ///
+    /// assert!(!exists);
+    /// ```
     pub fn exists<V: Copy + Eq + Hash>(&self, h: &AdjList<V>) -> bool {
-        self.meta_problem(h).solution_exists()
+        self.problem(h).solution_exists()
     }
 
     pub fn find_all<V: Copy + Eq + Hash>(&self, h: &AdjList<V>) -> Vec<HashMap<Term<V>, V>> {
-        self.meta_problem(h).solve_all()
+        self.problem(h).solve_all()
     }
 }
 
@@ -611,7 +645,7 @@ fn totally_symmetric_helper(sum: u32, n: u32) -> Vec<Vec<u32>> {
     result
 }
 
-fn height1_neighbors<V, I>(condition: &Identities, term: &Term<V>, vertices: I) -> Vec<Term<V>>
+fn height1_neighbors<V, I>(condition: &Polymorphism, term: &Term<V>, vertices: I) -> Vec<Term<V>>
 where
     I: IntoIterator<Item = V> + Clone,
     I::IntoIter: Clone,
@@ -663,7 +697,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::algebra::Identities;
+    use crate::algebra::Polymorphism;
     use crate::graph::classes::triad;
 
     #[test]
@@ -690,11 +724,11 @@ mod tests {
             (16, 15),
             (17, 16),
         ]);
-        let wnu2 = Identities::wnu(2);
+        let wnu2 = Polymorphism::wnu(2);
         let wnu2_exists = wnu2.exists(&graph) || wnu2.exists(&triad);
         assert!(!wnu2_exists);
 
-        let kmm = Identities::kmm();
+        let kmm = Polymorphism::kmm();
         let kmm_exists = kmm.exists(&graph) || kmm.exists(&triad);
         assert!(!kmm_exists);
     }
@@ -721,11 +755,11 @@ mod tests {
             (15, 9),
             (12, 10),
         ]);
-        let majority_exists = Identities::majority().exists(&graph);
-        assert!(majority_exists);
-
-        let wnu2_exists = Identities::wnu(2).exists(&graph);
+        let wnu2_exists = Polymorphism::wnu(2).exists(&graph);
         assert!(!wnu2_exists);
+
+        let majority_exists = Polymorphism::majority().exists(&graph);
+        assert!(majority_exists);
     }
 
     #[test]
@@ -747,13 +781,13 @@ mod tests {
             (14, 15),
             (13, 6),
         ]);
-        let majority = Identities::majority().exists(&graph);
+        let majority = Polymorphism::majority().exists(&graph);
         assert!(!majority);
 
-        let homck2 = Identities::hobby_mckenzie(2).exists(&graph);
+        let homck2 = Polymorphism::hobby_mckenzie(2).exists(&graph);
         assert!(homck2);
 
-        let kk5 = Identities::kearnes_kiss(5).exists(&graph);
+        let kk5 = Polymorphism::kearnes_kiss(5).exists(&graph);
         assert!(kk5);
     }
 
@@ -772,7 +806,7 @@ mod tests {
             (8, 10),
             (10, 11),
         ]);
-        let hami = Identities::hagemann_mitschke(8).exists(&graph);
+        let hami = Polymorphism::hagemann_mitschke(8).exists(&graph);
         assert!(hami);
     }
 }

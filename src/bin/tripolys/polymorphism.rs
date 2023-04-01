@@ -4,7 +4,7 @@ use csv::WriterBuilder;
 use rayon::prelude::*;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
-use tripolys::algebra::Identities;
+use tripolys::algebra::Polymorphism;
 use tripolys::csp::Stats;
 use tripolys::graph::utils::{edge_list, parse_edge_list};
 use tripolys::graph::AdjList;
@@ -128,7 +128,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
 
     if let Some(graph) = args.value_of("graph") {
         let h: AdjList<usize> = parse_graph(graph)?;
-        let mut problem = polymorphism.meta_problem(&h);
+        let mut problem = polymorphism.problem(&h);
 
         println!("\n> Checking for polymorphisms...");
 
@@ -163,7 +163,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
     let results: Vec<Record> = graphs
         .into_par_iter()
         .map(|h| {
-            let mut problem = polymorphism.meta_problem(&h);
+            let mut problem = polymorphism.problem(&h);
             let found = problem.solution_exists();
             let graph = edge_list(h);
 
@@ -228,23 +228,23 @@ impl Serialize for Record {
     }
 }
 
-fn parse_condition(s: &str) -> Result<Identities, String> {
+fn parse_condition(s: &str) -> Result<Polymorphism, String> {
     match &*s.to_ascii_lowercase() {
-        "majority" => Ok(Identities::majority()),
-        "siggers" => Ok(Identities::siggers()),
-        "kmm" => Ok(Identities::kmm()),
+        "majority" => Ok(Polymorphism::majority()),
+        "siggers" => Ok(Polymorphism::siggers()),
+        "kmm" => Ok(Polymorphism::kmm()),
         _ => {
             if let Some((pr, su)) = s.split_once('-') {
                 if let Ok(pr) = pr.parse() {
                     match su {
-                        "wnu" => Ok(Identities::wnu(pr)),
-                        "nu" => Ok(Identities::nu(pr)),
-                        "j" => Ok(Identities::jonsson(pr)),
-                        "hami" => Ok(Identities::hagemann_mitschke(pr)),
-                        "kk" => Ok(Identities::kearnes_kiss(pr)),
-                        "homck" => Ok(Identities::hobby_mckenzie(pr)),
-                        "nn" => Ok(Identities::no_name(pr)),
-                        "ts" => Ok(Identities::totally_symmetric(pr)),
+                        "wnu" => Ok(Polymorphism::wnu(pr)),
+                        "nu" => Ok(Polymorphism::nu(pr)),
+                        "j" => Ok(Polymorphism::jonsson(pr)),
+                        "hami" => Ok(Polymorphism::hagemann_mitschke(pr)),
+                        "kk" => Ok(Polymorphism::kearnes_kiss(pr)),
+                        "homck" => Ok(Polymorphism::hobby_mckenzie(pr)),
+                        "nn" => Ok(Polymorphism::no_name(pr)),
+                        "ts" => Ok(Polymorphism::totally_symmetric(pr)),
                         &_ => Err("unknown Condition, cannot convert from str".to_owned()),
                     }
                 } else {
