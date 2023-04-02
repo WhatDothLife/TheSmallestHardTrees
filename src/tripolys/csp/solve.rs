@@ -1,11 +1,6 @@
-use itertools::Itertools;
-
-use std::{
-    ops::Neg,
-    time::{Duration, Instant},
-};
-
 use super::{domain::Domain, problem::*};
+use itertools::Itertools;
+use std::time::{Duration, Instant};
 
 // Macros to trace debug logging
 
@@ -158,91 +153,6 @@ pub fn solve<C>(
     solve_iterative(domains, constraints, stats, out, stop_at_first);
     let t_end = t_start.elapsed();
     stats.mac3_time = t_end;
-}
-
-fn solve_recursive<C>(
-    domains: &mut Vec<Domain<Value>>,
-    constraints: &C,
-    stats: &mut Stats,
-    mut out: impl FnMut(Vec<Value>),
-    stop_at_first: bool,
-) where
-    C: Constraints,
-{
-    // Variables wtih smallest remaining values first
-    // Order is static during the solving process
-    let mut stack: Vec<Var> = (0..domains.len())
-        .sorted_by_key(|&x| (domains[x].size() as isize).neg())
-        .collect();
-
-    let _ = solve_recursive_inner(
-        &mut stack,
-        domains,
-        constraints,
-        stats,
-        &mut out,
-        stop_at_first,
-    );
-}
-
-#[derive(Clone, Debug)]
-pub(crate) enum SolveError {
-    /// Used internally to stop after the first solution (if enabled)
-    RequestedStop,
-}
-
-fn solve_recursive_inner<C>(
-    stack: &mut Vec<Var>,
-    domains: &mut Vec<Domain<Value>>,
-    constraints: &C,
-    stats: &mut Stats,
-    out: &mut impl FnMut(Vec<Value>),
-    stop_at_first: bool,
-) -> Result<(), SolveError>
-where
-    C: Constraints,
-{
-    if stack.is_empty() {
-        let solution = domains.iter().map(|d| d[0]).collect();
-        trace!("==> Valid solution: {:?}", solution);
-        stats.solutions += 1;
-        out(solution);
-
-        if stop_at_first {
-            return Err(SolveError::RequestedStop);
-        }
-    }
-
-    let mut status = Ok(());
-    let x = stack.pop().unwrap();
-    trace!("Selected variable = {}", x);
-
-    for i in 0..domains[x].size() {
-        trace!("Assignment: {} -> {}", x, domains[x][i]);
-        let mut trail = vec![x];
-        domains[x].save_state();
-        domains[x].assign(i);
-        stats.assignments += 1;
-
-        if mac_3(x, domains, constraints, &mut trail, stats) {
-            trace!("Propagation successful, recursing...");
-            // Repeat the algorithm recursively on the reduced domains
-            status = solve_recursive_inner(stack, domains, constraints, stats, out, stop_at_first);
-        } else {
-            trace!("Detected inconsistency, backtracking...");
-            stats.backtracks += 1;
-        }
-        if status.is_err() {
-            break;
-        }
-        // Backtrack
-        for x in trail {
-            domains[x].restore_state();
-        }
-    }
-    stack.push(x);
-
-    status
 }
 
 fn debug_print(domains: &Vec<Domain<Value>>) {
