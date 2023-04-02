@@ -149,10 +149,10 @@ tripolys polymorphism -g 1011000,1001111,010111 -c kmm -I
 tripolys polymorphism -g k3 -c 3-wnu -I
 ```
 ```
-tripolys homomorphism -f graph.csv -t t3
+tripolys homomorphism --from graph.csv --to t3
 ```
 ```
-tripolys homomorphism -f p5 -t c2
+tripolys homomorphism --from p5 --to c2
 ```
 
 Contact
