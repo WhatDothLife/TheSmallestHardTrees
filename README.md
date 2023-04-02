@@ -122,7 +122,7 @@ and this is how you can test them:
 ### A tree not known to be in NL (Section 7.2.1)
 
 The trees not known to be in NL are
-[here](https://github.com/WhatDothLife/HardTreesData/16/majority_deny.csv)
+[here](https://github.com/WhatDothLife/HardTreesData/blob/master/16/core_trees_majority_deny.csv)
 and this is how you can test them:
 
 ```
