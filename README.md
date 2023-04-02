@@ -71,22 +71,30 @@ You may need to modify the path to the data folder via the option `data_path`
 
 ### The smallest NP-hard trees (Section 7.1.1) 
 
-The trees can be found [here](file:data/20/kmm_deny.csv). (TODO put the data there)
+The trees can be found
+[here](https://github.com/WhatDothLife/HardTreesData/blob/master/20/core_trees_kmm_deny.csv).
 To reproduce the result, run the following sequence of commands:
 
 ```
 cd data/20
-tripolys polymorphism -i cores.edges -o 2-wnu_deny.csv -c 2-wnu -f deny
-tripolys polymorphism -i 2-wnu_deny.csv -o 3-wnu_deny.csv -c 3-wnu -f deny
-tripolys polymorphism -i 3-wnu_deny.csv -o kmm_deny.csv -c kmm -f deny
+tripolys polymorphism -i core_trees.edges -o core_trees_2-wnu_deny.csv -c 2-wnu -f deny
+tripolys polymorphism -i core_trees_2-wnu_deny.csv -o core_trees_kmm_deny.csv -c kmm -f deny
 ```
 
-We also found the smallest NP-hard triads: (TODO link edge lists here?)
-The triads can be found [here](file:data/20/triads/kmm_deny.csv).
+We also found the smallest NP-hard triads: 
+The triads can be found [here](https://github.com/WhatDothLife/HardTreesData/blob/master/22/core_triads_kmm_deny.csv).
 
 ```
 tripolys generate -s 4 -e 22 --core --triad
 ```
+
+```
+cd data/22
+tripolys polymorphism -i core_triads.edges -o core_triads_2-wnu_deny.csv -c 2-wnu -f deny
+tripolys polymorphism -i core_triads_2-wnu_deny.csv -o core_triads_kmm_deny.csv -c kmm -f deny
+```
+
+Or test each one with it's compact encoding:
 
 ```
 tripolys polymorphism -g 10110000,0101111,100111 -c kmm
