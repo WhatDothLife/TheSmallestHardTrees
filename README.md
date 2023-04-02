@@ -113,10 +113,13 @@ TODO
 ### The smallest tree not solved by Arc Consistency (Section 7.1.4)
 
 The trees not solved by Arc Consistency are
-[TODO]
+[here](https://github.com/WhatDothLife/HardTreesData/blob/master/19/core_trees_2-wnu_deny.csv)
 and this is how you can test them:
 
-[TODO]
+```
+cd data/19
+tripolys polymorphism -i core_trees.edges -o core_trees_2-wnu_deny.csv -c 2-wnu -f deny
+```
 
 
 ### A tree not known to be in NL (Section 7.2.1)
