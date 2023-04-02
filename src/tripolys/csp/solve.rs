@@ -263,7 +263,6 @@ fn solve_iterative<C>(
     let variables: Vec<Var> = (0..domains.len())
         .sorted_by_key(|&x| domains[x].size())
         .collect();
-    let x = variables[0];
     let mut assignments = vec![0; domains.len()];
     let mut states: Vec<Vec<Var>> = Vec::new();
     let mut depth = 0;
