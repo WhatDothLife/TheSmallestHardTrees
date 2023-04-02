@@ -127,7 +127,7 @@ and this is how you can test them:
 
 ```
 cd data/16
-tripolys polymorphism -i cores.edges -o majority_deny.csv -c majority -f deny
+tripolys polymorphism -i core_trees.edges -o core_trees_majority_deny.csv -c majority -f deny
 ```
 
 (TODO how to run the tests for KK, HMcK, J?)
