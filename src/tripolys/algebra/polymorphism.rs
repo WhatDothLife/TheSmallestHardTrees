@@ -37,7 +37,7 @@ impl<T: Copy> Term<T> {
         self.arguments.len()
     }
 
-    /// Returns the symbol of the `Term`.
+    /// Returns the operation symbol of the `Term`.
     pub fn symbol(&self) -> &str {
         &self.symbol
     }
