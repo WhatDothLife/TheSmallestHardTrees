@@ -1,8 +1,5 @@
-use std::str::FromStr;
 use std::sync::Arc;
 use std::{cmp::max, ops::Range};
-
-use itertools::Itertools;
 
 use crate::graph::traits::{Edges, VertexType, Vertices};
 
@@ -183,89 +180,6 @@ impl FromIterator<(Arc<Tree>, bool)> for Tree {
             node.push_child(child, dir);
         }
         node
-    }
-}
-
-impl FromStr for Tree {
-    type Err = ParseTreeNodeError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut children_stack = Vec::<Vec<(Arc<Tree>, bool)>>::new();
-        let mut dir_stack = Vec::new();
-
-        let chars = s.chars().tuple_windows();
-        let mut dir = false;
-
-        for (c, d) in chars {
-            match (c, d) {
-                ('0', e) => {
-                    dir = false;
-                    match e {
-                        '0' | '1' | ']' => {
-                            children_stack
-                                .last_mut()
-                                .unwrap()
-                                .push((Arc::new(Tree::leaf()), dir));
-                        }
-                        _ => {}
-                    }
-                }
-                ('1', e) => {
-                    dir = true;
-                    match e {
-                        '0' | '1' | ']' => {
-                            children_stack
-                                .last_mut()
-                                .unwrap()
-                                .push((Arc::new(Tree::leaf()), dir));
-                        }
-                        _ => {}
-                    }
-                }
-                ('[', _) => {
-                    children_stack.push(Vec::new());
-                    dir_stack.push(dir);
-                }
-                (']', _) => {
-                    let children = children_stack.pop().unwrap();
-                    let dir = dir_stack.pop().unwrap();
-                    children_stack
-                        .last_mut()
-                        .unwrap()
-                        .push((Arc::new(Tree::from_iter(children)), dir));
-                }
-                (e, _) => {
-                    return Err(ParseTreeNodeError::InvalidCharacter(e));
-                }
-            }
-        }
-        if let Some(v) = children_stack.pop() {
-            Ok(Tree::from_iter(v))
-        } else {
-            Err(ParseTreeNodeError::InvalidCharacter('a'))
-        }
-    }
-}
-
-#[derive(Debug)]
-pub enum ParseTreeNodeError {
-    InvalidCharacter(char),
-    // Delimiter
-}
-
-impl std::fmt::Display for ParseTreeNodeError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            ParseTreeNodeError::InvalidCharacter(c) => write!(f, "Could not parse: {c}"),
-        }
-    }
-}
-
-impl std::error::Error for ParseTreeNodeError {
-    fn description(&self) -> &str {
-        match self {
-            ParseTreeNodeError::InvalidCharacter(_) => "Only 0, 1, [, ] allowed!",
-        }
     }
 }
 
