@@ -47,6 +47,7 @@ impl<T: Copy> Term<T> {
         &self.arguments
     }
 
+    /// Maps a `Term<T>` to `Term<U>` by applying a function to the arguments.
     pub fn map<U, F>(&self, op: F) -> Term<U>
     where
         F: FnMut(T) -> U,
@@ -144,9 +145,7 @@ fn print_identities(identities: &Polymorphism) {
 }
 
 fn level_wise<V: Copy + Hash + Eq>(lhs: &Term<V>, rhs: &Term<V>) -> bool {
-    lhs.arguments().iter().unique().count() == 2
-        && rhs.arguments().iter().unique().count() == 2
-        && chain(lhs.arguments(), rhs.arguments()).unique().count() == 2
+    lhs.arguments().iter().unique().count() == 2 && rhs.arguments().iter().unique().count() == 2
 }
 
 fn parse(s: &str) -> Result<Polymorphism, String> {
