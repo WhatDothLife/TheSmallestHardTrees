@@ -146,7 +146,7 @@ where
 {
     for k in 0..g.vertex_count() {
         let h: AdjList<_> = directed_path(k + 1);
-        let res = Problem::new(g, h).solve();
+        let res = Problem::new(g, h).solve_first();
 
         if res.is_some() {
             return res;

@@ -92,7 +92,7 @@ where
 
     /// Returns true, if the there exists a solution to the problem.
     pub fn solution_exists(&mut self) -> bool {
-        self.solve().is_some()
+        self.solve_first().is_some()
     }
 
     /// Get the first found solution to the problem
@@ -101,7 +101,7 @@ where
     /// one solution: the extra work in solve all is the part needed to know
     /// that the solution is unique, in that case. This method can not say if
     /// the solution is unique or not.
-    pub fn solve(&mut self) -> Option<HashMap<X, A>> {
+    pub fn solve_first(&mut self) -> Option<HashMap<X, A>> {
         let mut res = None;
         solve(
             &mut self.domains,
