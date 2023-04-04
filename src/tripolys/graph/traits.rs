@@ -70,26 +70,6 @@ pub trait HasEdge: VertexType {
     fn has_edge(&self, u: Self::Vertex, v: Self::Vertex) -> bool;
 }
 
-/// Contract vertices in a digraph.
-pub trait Contract: VertexType {
-    /// Contracts the vertex `u` with vertex `v`. Returns true if the
-    /// contraction was successful.
-    fn contract_vertex(&mut self, u: Self::Vertex, v: Self::Vertex) -> bool;
-
-    /// Contracts the vertices in `vertices`.
-    fn contract_vertices<I>(&mut self, vertices: I) -> bool
-    where
-        I: IntoIterator<Item = Self::Vertex>,
-    {
-        let mut iter = vertices.into_iter();
-
-        if let Some(u) = iter.next() {
-            return iter.map(|v| self.contract_vertex(u.clone(), v)).all(|x| x);
-        }
-        true
-    }
-}
-
 /// A directed graph.
 pub trait Digraph: Vertices + Edges {}
 

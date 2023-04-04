@@ -60,6 +60,30 @@ impl<V: Hash + Clone + Eq> AdjList<V> {
         self.lists.entry(v).or_default().incoming.insert(u);
     }
 
+    pub fn contract_vertex(&mut self, u: &V, v: &V) -> bool {
+        if u == v {
+            return true;
+        }
+        if !self.lists.contains_key(u) || !self.lists.contains_key(v) {
+            return false;
+        }
+        let neighbors = self.lists.remove(v).unwrap();
+
+        for w in neighbors.outgoing {
+            self.lists.get_mut(&w).unwrap().incoming.remove(v);
+            if &w != u {
+                self.add_edge(u.clone(), w.clone());
+            }
+        }
+        for w in neighbors.incoming {
+            self.lists.get_mut(&w).unwrap().outgoing.remove(v);
+            if &w != u {
+                self.add_edge(w.clone(), u.clone());
+            }
+        }
+        true
+    }
+
     pub fn from_edges<I: IntoIterator<Item = (V, V)>>(edges: I) -> AdjList<V> {
         let mut g = AdjList::new();
         for (u, v) in edges {
@@ -117,32 +141,6 @@ impl<V: Hash + Clone + Eq> HasEdge for AdjList<V> {
         } else {
             false
         }
-    }
-}
-
-impl<V: Hash + Clone + Eq> Contract for AdjList<V> {
-    fn contract_vertex(&mut self, u: Self::Vertex, v: Self::Vertex) -> bool {
-        if u == v {
-            return true;
-        }
-        if !self.lists.contains_key(&u) || !self.lists.contains_key(&v) {
-            return false;
-        }
-        let neighbors = self.lists.remove(&v).unwrap();
-
-        for w in neighbors.outgoing {
-            self.lists.get_mut(&w).unwrap().incoming.remove(&v);
-            if w != u {
-                self.add_edge(u.clone(), w.clone());
-            }
-        }
-        for w in neighbors.incoming {
-            self.lists.get_mut(&w).unwrap().outgoing.remove(&v);
-            if w != u {
-                self.add_edge(w.clone(), u.clone());
-            }
-        }
-        true
     }
 }
 
@@ -238,9 +236,9 @@ mod tests {
 
         assert_eq!(graph.has_edge(1, 4), false);
 
-        assert_eq!(graph.contract_vertex(1, 2), true);
-        assert_eq!(graph.contract_vertex(0, 5), false);
-        assert_eq!(graph.contract_vertex(0, 0), true);
+        assert_eq!(graph.contract_vertex(&1, &2), true);
+        assert_eq!(graph.contract_vertex(&0, &5), false);
+        assert_eq!(graph.contract_vertex(&0, &0), true);
 
         assert_eq!(graph.vertex_count(), 4);
         assert_eq!(graph.edge_count(), 4);

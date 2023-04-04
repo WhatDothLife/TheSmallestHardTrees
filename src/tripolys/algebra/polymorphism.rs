@@ -2,7 +2,7 @@ use super::iteralgebra::IterAlgebra;
 use super::levels;
 
 use crate::csp::Problem;
-use crate::graph::traits::{Contract, Edges, Vertices};
+use crate::graph::traits::{Edges, Vertices};
 use crate::graph::AdjList;
 
 use indexmap::IndexSet;
@@ -388,7 +388,7 @@ impl Polymorphisms {
             while let Some(x) = contracted.pop() {
                 for v in height1_neighbors(self, &x, graph.vertices().collect()) {
                     if unprocessed.remove(&v) {
-                        ind_graph.contract_vertex(u.clone(), v.clone());
+                        ind_graph.contract_vertex(&u, &v);
                         contracted.push(v);
                     }
                 }
