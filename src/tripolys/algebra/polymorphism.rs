@@ -355,7 +355,30 @@ impl Polymorphisms {
         self
     }
 
-    pub fn indicator_graph<V: Copy + Eq + Hash>(&self, graph: &AdjList<V>) -> AdjList<Term<V>> {
+    /// Computes the indicator graph H<sup>Ind</sup> of `graph`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tripolys::graph::AdjList;
+    /// use tripolys::graph::classes::triad;
+    /// use tripolys::algebra::Polymorphisms;
+    /// use tripolys::csp::Problem;
+    ///
+    /// let triad: AdjList<_> = triad("01001111,1010000,011000").unwrap();
+    /// let mut ind_graph = Polymorphisms::wnu(2).indicator_graph(&triad);
+    ///
+    /// assert!(!Problem::new(&ind_graph, &triad).solution_exists());
+    /// ```
+    ///
+    /// # Note
+    ///
+    /// The size of the indicator digraph grows exponentially with the
+    /// arity of the function symbols in the condition and linearly with
+    /// number of function symbols.
+     pub fn indicator_graph<V: Copy + Eq + Hash>(&self, graph: &AdjList<V>) -> AdjList<Term<V>> {
+        // Construct for each function symbol the categorical power of H of
+        // the corresponding arity, and take their disjoint union.
         let mut ind_edges: Vec<_> = self
             .ops
             .iter()
@@ -368,6 +391,9 @@ impl Polymorphisms {
             .collect();
 
         if self.level_wise {
+            // For every function symbol (say of arity k) we construct only the
+            // subgraph of H^k consisting of all same-level k-tuples
+            // (i.e., tuples in which all vertices are from the same level).
             if let Some(lvls) = levels(graph) {
                 ind_edges.retain(|(u, _)| {
                     u.arguments()
@@ -379,17 +405,35 @@ impl Polymorphisms {
         }
         let mut ind_graph = AdjList::from_edges(ind_edges);
 
+        // Identify vertices that need to be inditified as dictated by the
+        // h1-identities
         let mut unprocessed: IndexSet<_> = ind_graph.vertices().collect();
         let mut contracted = Vec::new();
 
         while let Some(u) = unprocessed.pop() {
             contracted.push(u.clone());
 
-            while let Some(x) = contracted.pop() {
-                for v in height1_neighbors(self, &x, graph.vertices().collect()) {
-                    if unprocessed.remove(&v) {
-                        ind_graph.contract_vertex(&u, &v);
-                        contracted.push(v);
+            while let Some(v) = contracted.pop() {
+                for (lhs, rhs) in self.h1.iter().flat_map(|(a, b)| [(a, b), (b, a)]) {
+                    if let Some(binding) = lhs.match_with(&v) {
+                        let unbound_vars: Vec<_> = rhs
+                            .arguments()
+                            .iter()
+                            .copied()
+                            .filter(|v| binding.get(v).is_none())
+                            .unique()
+                            .collect();
+
+                        for values in graph.vertices().kproduct(unbound_vars.len()) {
+                            let mut binding = binding.clone();
+                            binding.extend(zip(unbound_vars.clone(), values));
+                            let mapped = rhs.map(|x| *binding.get(&x).unwrap());
+
+                            if unprocessed.remove(&mapped) {
+                                ind_graph.contract_vertex(&u, &mapped);
+                                contracted.push(mapped);
+                            }
+                        }
                     }
                 }
             }
@@ -409,7 +453,7 @@ impl Polymorphisms {
     /// use tripolys::algebra::Polymorphisms;
     ///
     /// let triad: AdjList<_> = triad("01001111,1010000,011000").unwrap();
-    /// let mut problem = Polymorphisms::kmm().problem(&triad);
+    /// let mut problem = Polymorphisms::wnu(2).problem(&triad);
     ///
     /// assert!(!problem.solution_exists());
     /// ```
@@ -417,6 +461,9 @@ impl Polymorphisms {
         let indicator = self.indicator_graph(h);
         let mut problem = Problem::new(&indicator, h);
 
+        // For every identity that is not height-one, find every vertex of H^Ind
+        // that comes from a tuple of vertices of H matching the left-hand side
+        // and set its value to the vertex of H given by the right-hand side.
         for v in indicator.vertices() {
             for (term, constant) in &self.non_h1 {
                 if let Some(bindings) = term.match_with(&v) {
@@ -445,7 +492,7 @@ impl Polymorphisms {
     /// use tripolys::algebra::Polymorphisms;
     ///
     /// let triad: AdjList<_> = triad("01001111,1010000,011000").unwrap();
-    /// let exists = Polymorphisms::kmm().exist(&triad);
+    /// let exists = Polymorphisms::wnu(2).exist(&triad);
     ///
     /// assert!(!exists);
     /// ```
@@ -644,45 +691,6 @@ fn totally_symmetric_helper(sum: u32, n: u32) -> Vec<Vec<u32>> {
     inner(sum, n, &mut sequence, 0, &mut result);
 
     result
-}
-
-fn height1_neighbors<V>(condition: &Polymorphisms, term: &Term<V>, vertices: Vec<V>) -> Vec<Term<V>>
-where
-    V: Copy + Eq + Hash,
-{
-    let mut res = Vec::new();
-
-    for (lhs, rhs) in condition.h1.iter().flat_map(|(a, b)| [(a, b), (b, a)]) {
-        if let Some(binding) = lhs.match_with(term) {
-            res.extend(neighbors(rhs, binding, vertices.clone()));
-        }
-    }
-
-    res
-}
-
-fn neighbors<U, V>(term: &Term<U>, mapping: HashMap<U, V>, vertices: Vec<V>) -> Vec<Term<V>>
-where
-    U: Copy + Hash + Eq,
-    V: Copy,
-{
-    let unbound_vars: Vec<_> = term
-        .arguments()
-        .iter()
-        .copied()
-        .filter(|v| mapping.get(v).is_none())
-        .unique()
-        .collect();
-
-    vertices
-        .into_iter()
-        .kproduct(unbound_vars.len())
-        .map(|values| {
-            let mut mapping = mapping.clone();
-            mapping.extend(zip(unbound_vars.clone(), values));
-            term.map(|x| *mapping.get(&x).unwrap())
-        })
-        .collect()
 }
 
 #[cfg(test)]
