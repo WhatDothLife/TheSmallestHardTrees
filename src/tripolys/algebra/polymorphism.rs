@@ -144,6 +144,7 @@ fn print_identities(identities: &Polymorphisms) {
     }
 }
 
+/// Checks if both sides have exactly two variables
 fn level_wise<V: Copy + Hash + Eq>(lhs: &Term<V>, rhs: &Term<V>) -> bool {
     lhs.arguments().iter().unique().count() == 2 && rhs.arguments().iter().unique().count() == 2
 }
