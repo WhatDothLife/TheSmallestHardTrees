@@ -4,7 +4,7 @@ use csv::WriterBuilder;
 use rayon::prelude::*;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
-use tripolys::algebra::Polymorphism;
+use tripolys::algebra::Polymorphisms;
 use tripolys::csp::Stats;
 use tripolys::graph::utils::{edge_list, parse_edge_list};
 use tripolys::graph::AdjList;
@@ -228,23 +228,23 @@ impl Serialize for Record {
     }
 }
 
-fn parse_condition(s: &str) -> Result<Polymorphism, String> {
+fn parse_condition(s: &str) -> Result<Polymorphisms, String> {
     match &*s.to_ascii_lowercase() {
-        "majority" => Ok(Polymorphism::majority()),
-        "siggers" => Ok(Polymorphism::siggers()),
-        "kmm" => Ok(Polymorphism::kmm()),
+        "majority" => Ok(Polymorphisms::majority()),
+        "siggers" => Ok(Polymorphisms::siggers()),
+        "kmm" => Ok(Polymorphisms::kmm()),
         _ => {
             if let Some((pr, su)) = s.split_once('-') {
                 if let Ok(pr) = pr.parse() {
                     match su {
-                        "wnu" => Ok(Polymorphism::wnu(pr)),
-                        "nu" => Ok(Polymorphism::nu(pr)),
-                        "j" => Ok(Polymorphism::jonsson(pr)),
-                        "hami" => Ok(Polymorphism::hagemann_mitschke(pr)),
-                        "kk" => Ok(Polymorphism::kearnes_kiss(pr)),
-                        "homck" => Ok(Polymorphism::hobby_mckenzie(pr)),
-                        "nn" => Ok(Polymorphism::no_name(pr)),
-                        "ts" => Ok(Polymorphism::totally_symmetric(pr)),
+                        "wnu" => Ok(Polymorphisms::wnu(pr)),
+                        "nu" => Ok(Polymorphisms::nu(pr)),
+                        "j" => Ok(Polymorphisms::jonsson(pr)),
+                        "hami" => Ok(Polymorphisms::hagemann_mitschke(pr)),
+                        "kk" => Ok(Polymorphisms::kearnes_kiss(pr)),
+                        "homck" => Ok(Polymorphisms::hobby_mckenzie(pr)),
+                        "nn" => Ok(Polymorphisms::no_name(pr)),
+                        "ts" => Ok(Polymorphisms::totally_symmetric(pr)),
                         &_ => Err("unknown Condition, cannot convert from str".to_owned()),
                     }
                 } else {
