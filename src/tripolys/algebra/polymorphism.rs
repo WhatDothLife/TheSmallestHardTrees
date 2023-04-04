@@ -232,20 +232,23 @@ impl Polymorphisms {
     }
 
     condition!(siggers, "s(area)=s(rare)");
-    condition!(maltsev, "f(xxy)=f(yxx)=y");
-    condition!(majority, "m(xxy)=m(xyx)=m(yxx)=m(xxx)=x");
     condition!(kmm, "p(xyy)=q(yxx)=q(xxy)", "p(xyx)=q(xyx)");
-    condition!(fs3, "f(xyz)=f(zxy)=f(yxz)");
+    condition!(majority, "m(xxy)=m(xyx)=m(yxx)=m(xxx)=x");
     condition!(minority, "m(yyy)=m(xxy)=m(xyx)=m(yxx)=y");
+    condition!(maltsev, "f(xxy)=f(yxx)=y");
+    condition!(fs3, "f(xyz)=f(zxy)=f(yxz)");
     condition!(edge4, "f(yyxx)=f(yxyx)=f(xxxx)=f(xxxy)");
     condition!(edge5, "f(yyxxx)=f(yxyxx)=f(xxxxx)=f(xxxyx)=f(xxxxy)");
+    condition!(symmetric_majority, "t(xyz)=t(yxz)=t(yzx)", "t(xxy)=t(xxx)");
+    condition!(g2, "f(aaxy)=f(bbxy)=f(xaay)=f(yaxa)");
+    condition!(g3, "f(aaxyz)=f(bbxyz)=f(xaayz)=f(yaxaz)=f(zaxya)");
+    condition!(gs3, "f(xxxx)=f(xxxy)", "f((123x)=f(231x)");
     condition!(
         wnu3_4,
         "g(xxy)=g(xyx)=g(yxx)",
         "f(xxxy)=f(xxyx)=f(xyxx)=f(yxxx)",
         "g(yxx)=f(yxxx)"
     );
-    condition!(constant, "f(x)=f(y)", "x=y");
     condition!(
         hm2maj,
         "p(yyx)=p(xxx)",
@@ -258,10 +261,6 @@ impl Polymorphisms {
         "p(xyy)=p(xxx)=p(xyx),p(xxy)=q(xyy)",
         "q(yxy)=q(xxy)=q(yyy)"
     );
-    condition!(symmetric_majority, "t(xyz)=t(yxz)=t(yzx)", "t(xxy)=t(xxx)");
-    condition!(g2, "f(aaxy)=f(bbxy)=f(xaay)=f(yaxa)");
-    condition!(g3, "f(aaxyz)=f(bbxyz)=f(xaayz)=f(yaxaz)=f(zaxya)");
-    condition!(gs3, "f(xxxx)=f(xxxy)", "f((123x)=f(231x)");
 
     /// f (y,x,x,…,x,x) = f (x,y,x,…,x,x) = … = f (x,x,x,…,x,y)
     pub fn wnu(k: u32) -> Polymorphisms {
