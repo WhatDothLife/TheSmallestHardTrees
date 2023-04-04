@@ -379,16 +379,17 @@ impl Polymorphisms {
         }
         let mut ind_graph = AdjList::from_edges(ind_edges);
 
-        let mut queue: IndexSet<_> = ind_graph.vertices().collect();
+        let mut unprocessed: IndexSet<_> = ind_graph.vertices().collect();
+        let mut contracted = Vec::new();
 
-        while let Some(u) = queue.pop() {
-            let mut queue_u = vec![u.clone()];
+        while let Some(u) = unprocessed.pop() {
+            contracted.push(u.clone());
 
-            while let Some(x) = queue_u.pop() {
+            while let Some(x) = contracted.pop() {
                 for v in height1_neighbors(self, &x, graph.vertices().collect()) {
-                    if queue.remove(&v) {
+                    if unprocessed.remove(&v) {
                         ind_graph.contract_vertex(u.clone(), v.clone());
-                        queue_u.push(v);
+                        contracted.push(v);
                     }
                 }
             }
