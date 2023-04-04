@@ -404,10 +404,10 @@ impl Polymorphisms {
     /// ```
     /// use tripolys::graph::AdjList;
     /// use tripolys::graph::classes::triad;
-    /// use tripolys::algebra::Polymorphism;
+    /// use tripolys::algebra::Polymorphisms;
     ///
     /// let triad: AdjList<_> = triad("01001111,1010000,011000").unwrap();
-    /// let problem = Polymorphism::kmm().problem(&triad);
+    /// let mut problem = Polymorphisms::kmm().problem(&triad);
     ///
     /// assert!(!problem.solution_exists());
     /// ```
@@ -440,10 +440,10 @@ impl Polymorphisms {
     /// ```
     /// use tripolys::graph::AdjList;
     /// use tripolys::graph::classes::triad;
-    /// use tripolys::algebra::Polymorphism;
+    /// use tripolys::algebra::Polymorphisms;
     ///
     /// let triad: AdjList<_> = triad("01001111,1010000,011000").unwrap();
-    /// let exists = Polymorphism::kmm().exists(&triad);
+    /// let exists = Polymorphisms::kmm().exist(&triad);
     ///
     /// assert!(!exists);
     /// ```
