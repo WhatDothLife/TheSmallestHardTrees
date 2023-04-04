@@ -333,7 +333,7 @@ impl Polymorphisms {
         // can be satisfied level-wise. While parsing we only check for the case
         // where a h1-condition in two variables has both these variables appear
         // on each side in every identity. However, totally symmetric can also
-        // satisfied level-wise for any k.
+        // be satisfied level-wise for any k.
         ids.level_wise = true;
         ids
     }
