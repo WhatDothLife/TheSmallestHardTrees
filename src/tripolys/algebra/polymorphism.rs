@@ -153,7 +153,7 @@ fn parse(s: &str) -> Result<Polymorphisms, String> {
     let mut non_h1 = Vec::new();
     let mut h1: Vec<(Term<char>, Term<char>)> = Vec::new();
 
-    for eq_str in s.split([',', '\n']).filter(|x| !x.is_empty()) {
+    for eq_str in s.trim().split([',', '\n']).filter(|x| !x.is_empty()) {
         let mut constant = None;
         let mut terms = Vec::new();
 
