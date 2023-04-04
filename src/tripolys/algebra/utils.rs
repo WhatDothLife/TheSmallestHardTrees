@@ -41,7 +41,7 @@ where
     F: FnMut(G::Vertex) -> H::Vertex,
 {
     for (u, v) in g.edges() {
-        if !h.has_edge(f(u), f(v)) {
+        if !h.has_edge(&f(u), &f(v)) {
             return false;
         }
     }
@@ -115,7 +115,7 @@ where
 ///
 /// let mut g = AdjList::from_edges([(0, 1), (1, 2), (2, 3), (1, 4)]);
 /// assert!(is_balanced(&g));
-/// g.add_edge(0, 2);
+/// g.add_edge(&0, &2);
 /// assert!(!is_balanced(&g));
 /// ```
 pub fn is_balanced<G>(g: &G) -> bool

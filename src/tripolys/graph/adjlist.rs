@@ -51,13 +51,21 @@ impl<V: Hash + Clone + Eq> AdjList<V> {
         self.lists.entry(v).or_default();
     }
 
-    pub fn add_edge(&mut self, u: V, v: V) {
+    pub fn add_edge(&mut self, u: &V, v: &V) {
         self.lists
             .entry(u.clone())
             .or_default()
             .outgoing
             .insert(v.clone());
-        self.lists.entry(v).or_default().incoming.insert(u);
+        self.lists
+            .entry(v.clone())
+            .or_default()
+            .incoming
+            .insert(u.clone());
+    }
+
+    pub fn has_vertex(&self, v: &V) -> bool {
+        self.lists.contains_key(v)
     }
 
     pub fn contract_vertex(&mut self, u: &V, v: &V) -> bool {
@@ -72,13 +80,13 @@ impl<V: Hash + Clone + Eq> AdjList<V> {
         for w in neighbors.outgoing {
             self.lists.get_mut(&w).unwrap().incoming.remove(v);
             if &w != u {
-                self.add_edge(u.clone(), w.clone());
+                self.add_edge(u, &w);
             }
         }
         for w in neighbors.incoming {
             self.lists.get_mut(&w).unwrap().outgoing.remove(v);
             if &w != u {
-                self.add_edge(w.clone(), u.clone());
+                self.add_edge(&w, u);
             }
         }
         true
@@ -87,7 +95,9 @@ impl<V: Hash + Clone + Eq> AdjList<V> {
     pub fn from_edges<I: IntoIterator<Item = (V, V)>>(edges: I) -> AdjList<V> {
         let mut g = AdjList::new();
         for (u, v) in edges {
-            g.add_edge(u, v);
+            g.add_vertex(u.clone());
+            g.add_vertex(v.clone());
+            g.add_edge(&u, &v);
         }
         g
     }
@@ -106,12 +116,6 @@ impl<V: Hash + Clone + Eq> Vertices for AdjList<V> {
 
     fn vertices(&self) -> Self::VertexIter<'_> {
         VertexIter(self.lists.keys().cloned())
-    }
-}
-
-impl<V: Hash + Clone + Eq> HasVertex for AdjList<V> {
-    fn has_vertex(&self, v: Self::Vertex) -> bool {
-        self.lists.contains_key(&v)
     }
 }
 
@@ -135,9 +139,9 @@ impl<V: Hash + Clone + Eq> Edges for AdjList<V> {
 }
 
 impl<V: Hash + Clone + Eq> HasEdge for AdjList<V> {
-    fn has_edge(&self, u: Self::Vertex, v: Self::Vertex) -> bool {
-        if let Some(neighbors) = self.lists.get(&u) {
-            neighbors.outgoing.contains(&v)
+    fn has_edge(&self, u: &Self::Vertex, v: &Self::Vertex) -> bool {
+        if let Some(neighbors) = self.lists.get(u) {
+            neighbors.outgoing.contains(v)
         } else {
             false
         }
@@ -192,7 +196,9 @@ impl<'a, V: Clone> Iterator for EdgeIter<'a, V> {
     }
 }
 
-impl<V: Eq + Hash + Clone> Build for AdjList<V> {
+impl<V: Eq + Hash + Copy> Build for AdjList<V> {
+    type Vertex = V;
+
     fn with_capacities(nvertices: usize, _nedges: usize) -> Self {
         Self {
             lists: IndexMap::with_capacity(nvertices),
@@ -204,7 +210,7 @@ impl<V: Eq + Hash + Clone> Build for AdjList<V> {
     }
 
     fn add_edge(&mut self, u: Self::Vertex, v: Self::Vertex) {
-        self.add_edge(u, v)
+        self.add_edge(&u, &v)
     }
 }
 
@@ -220,11 +226,11 @@ mod tests {
         assert_eq!(graph.vertex_count(), 4);
         assert_eq!(graph.edge_count(), 4);
 
-        assert!(graph.has_vertex(0));
-        assert!(!graph.has_vertex(4));
+        assert!(graph.has_vertex(&0));
+        assert!(!graph.has_vertex(&4));
 
-        assert!(graph.has_edge(0, 1));
-        assert!(!graph.has_edge(1, 0));
+        assert!(graph.has_edge(&0, &1));
+        assert!(!graph.has_edge(&1, &0));
     }
 
     #[test]
@@ -234,7 +240,7 @@ mod tests {
         assert_eq!(graph.vertex_count(), 5);
         assert_eq!(graph.edge_count(), 5);
 
-        assert_eq!(graph.has_edge(1, 4), false);
+        assert_eq!(graph.has_edge(&1, &4), false);
 
         assert_eq!(graph.contract_vertex(&1, &2), true);
         assert_eq!(graph.contract_vertex(&0, &5), false);
@@ -243,8 +249,8 @@ mod tests {
         assert_eq!(graph.vertex_count(), 4);
         assert_eq!(graph.edge_count(), 4);
 
-        assert_eq!(graph.has_edge(1, 4), true);
-        assert_eq!(graph.has_edge(1, 2), false);
-        assert_eq!(graph.has_edge(2, 3), false);
+        assert_eq!(graph.has_edge(&1, &4), true);
+        assert_eq!(graph.has_edge(&1, &2), false);
+        assert_eq!(graph.has_edge(&2, &3), false);
     }
 }

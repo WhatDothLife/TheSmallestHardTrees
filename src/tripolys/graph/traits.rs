@@ -8,28 +8,6 @@ pub trait VertexType {
     type Vertex: Hash + Clone + Eq;
 }
 
-/// A trait for building digraphs.
-pub trait Build: VertexType + Default {
-    fn with_capacities(nvertices: usize, nedges: usize) -> Self;
-
-    /// Adds a new vertex to the graph.
-    fn add_vertex(&mut self, v: Self::Vertex);
-
-    /// Adds a new edge to the graph, connecting vertices `u` and `v`.
-    fn add_edge(&mut self, u: Self::Vertex, v: Self::Vertex);
-
-    fn from_edges<I>(edges: I) -> Self
-    where
-        I: IntoIterator<Item = (Self::Vertex, Self::Vertex)>,
-    {
-        let mut g = Self::default();
-        for (u, v) in edges {
-            g.add_edge(u, v);
-        }
-        g
-    }
-}
-
 /// Access the vertices of a digraph.
 pub trait Vertices: VertexType {
     /// Iterator over the vertices of the graph.
@@ -42,12 +20,6 @@ pub trait Vertices: VertexType {
 
     /// Returns the number of vertices in the graph.
     fn vertex_count(&self) -> usize;
-}
-
-/// Check if a graph has a specific vertex.
-pub trait HasVertex: VertexType {
-    /// Returns true if the graph contains the vertex `v`.
-    fn has_vertex(&self, v: Self::Vertex) -> bool;
 }
 
 /// Access the edges of a digraph.
@@ -67,7 +39,7 @@ pub trait Edges: VertexType {
 /// Check if a graph has a specific edge.
 pub trait HasEdge: VertexType {
     /// Returns true if the graph contains an edge from `u` to `v`.
-    fn has_edge(&self, u: Self::Vertex, v: Self::Vertex) -> bool;
+    fn has_edge(&self, u: &Self::Vertex, v: &Self::Vertex) -> bool;
 }
 
 /// A directed graph.
@@ -97,15 +69,6 @@ where
     }
 }
 
-impl<G> HasVertex for &G
-where
-    G: HasVertex,
-{
-    fn has_vertex(&self, v: Self::Vertex) -> bool {
-        (*self).has_vertex(v)
-    }
-}
-
 impl<G> Edges for &G
 where
     G: Edges,
@@ -125,7 +88,31 @@ impl<G> HasEdge for &G
 where
     G: HasEdge,
 {
-    fn has_edge(&self, u: Self::Vertex, v: Self::Vertex) -> bool {
+    fn has_edge(&self, u: &Self::Vertex, v: &Self::Vertex) -> bool {
         (*self).has_edge(u, v)
+    }
+}
+
+/// A trait for building digraphs.
+pub trait Build: Default {
+    type Vertex: Copy + Eq;
+
+    fn with_capacities(nvertices: usize, nedges: usize) -> Self;
+
+    /// Adds a new vertex to the graph.
+    fn add_vertex(&mut self, v: Self::Vertex);
+
+    /// Adds a new edge to the graph, connecting vertices `u` and `v`.
+    fn add_edge(&mut self, u: Self::Vertex, v: Self::Vertex);
+
+    fn from_edges<I>(edges: I) -> Self
+    where
+        I: IntoIterator<Item = (Self::Vertex, Self::Vertex)>,
+    {
+        let mut g = Self::default();
+        for (u, v) in edges {
+            g.add_edge(u, v);
+        }
+        g
     }
 }

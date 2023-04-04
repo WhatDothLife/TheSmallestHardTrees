@@ -11,9 +11,9 @@ use std::error::Error;
 use clap::{App, AppSettings};
 use colored::*;
 use tripolys::csp::Stats;
+use tripolys::graph::classes::*;
 use tripolys::graph::traits::Build;
 use tripolys::graph::utils::parse_edge_list;
-use tripolys::graph::{classes::*, traits::VertexType};
 
 mod dot;
 mod endomorphism;
@@ -66,7 +66,7 @@ fn main() {
 
 fn parse_graph<G>(s: &str) -> Result<G, &str>
 where
-    G: Build + VertexType<Vertex = usize>,
+    G: Build<Vertex = usize>,
 {
     if let Ok(class) = from_class(s) {
         return Ok(class);
@@ -82,7 +82,7 @@ where
 
 fn from_class<G>(class: &str) -> Result<G, &str>
 where
-    G: Build + VertexType<Vertex = usize>,
+    G: Build<Vertex = usize>,
 {
     if let Some(g) = class.chars().next() {
         if let Ok(n) = &class[1..].parse::<usize>() {
