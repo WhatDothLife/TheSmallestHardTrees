@@ -385,7 +385,7 @@ impl Polymorphisms {
             let mut queue_u = vec![u.clone()];
 
             while let Some(x) = queue_u.pop() {
-                for v in height1_neighbors(self, &x, graph.vertices()) {
+                for v in height1_neighbors(self, &x, graph.vertices().collect()) {
                     if queue.remove(&v) {
                         ind_graph.contract_vertex(u.clone(), v.clone());
                         queue_u.push(v);
@@ -645,51 +645,41 @@ fn totally_symmetric_helper(sum: u32, n: u32) -> Vec<Vec<u32>> {
     result
 }
 
-fn height1_neighbors<V, I>(condition: &Polymorphisms, term: &Term<V>, vertices: I) -> Vec<Term<V>>
+fn height1_neighbors<V>(condition: &Polymorphisms, term: &Term<V>, vertices: Vec<V>) -> Vec<Term<V>>
 where
-    I: IntoIterator<Item = V> + Clone,
-    I::IntoIter: Clone,
     V: Copy + Eq + Hash,
 {
     let mut res = Vec::new();
 
     for (lhs, rhs) in condition.h1.iter().flat_map(|(a, b)| [(a, b), (b, a)]) {
         if let Some(binding) = lhs.match_with(term) {
-            let neighbors = neighbors(rhs.arguments(), binding, vertices.clone())
-                .into_iter()
-                .map(|arguments| Term::new(rhs.symbol(), arguments));
-            res.extend(neighbors);
+            res.extend(neighbors(rhs, binding, vertices.clone()));
         }
     }
 
     res
 }
 
-fn neighbors<I, U, V>(args: &[U], bind: HashMap<U, V>, vertices: I) -> Vec<Vec<V>>
+fn neighbors<U, V>(term: &Term<U>, mapping: HashMap<U, V>, vertices: Vec<V>) -> Vec<Term<V>>
 where
-    I: IntoIterator<Item = V>,
-    I::IntoIter: Clone,
     U: Copy + Hash + Eq,
     V: Copy,
 {
-    let unbound_vars: Vec<_> = args
+    let unbound_vars: Vec<_> = term
+        .arguments()
         .iter()
         .copied()
-        .filter(|v| bind.get(v).is_none())
+        .filter(|v| mapping.get(v).is_none())
         .unique()
         .collect();
 
     vertices
         .into_iter()
         .kproduct(unbound_vars.len())
-        .map(|vs| {
-            let mut bind = bind.clone();
-            bind.extend(zip(unbound_vars.clone(), vs));
-
-            args.clone()
-                .into_iter()
-                .map(|x| *bind.get(&x).unwrap())
-                .collect()
+        .map(|values| {
+            let mut mapping = mapping.clone();
+            mapping.extend(zip(unbound_vars.clone(), values));
+            term.map(|x| *mapping.get(&x).unwrap())
         })
         .collect()
 }
