@@ -1,4 +1,4 @@
-use super::{domain::Domain, problem::*};
+use super::{state_vec::StateVec, problem::*};
 use itertools::Itertools;
 use std::time::{Duration, Instant};
 
@@ -53,14 +53,14 @@ enum Revision {
 fn revise<C: Constraints>(
     x: Var,
     y: Var,
-    domains: &mut Vec<Domain<Value>>,
+    domains: &mut Vec<StateVec<Value>>,
     constraints: &C,
     mut trail: Option<&mut Vec<Var>>, // If presents records variables whose domain was changed
     stats: &mut Stats,
 ) -> Revision {
     let mut revision = Revision::Unchanged;
 
-    for i in (0..domains[x].size()).rev() {
+    for i in (0..domains[x].vlen()).rev() {
         let mut is_possible = false;
 
         for &ay in domains[y].iter() {
@@ -81,7 +81,7 @@ fn revise<C: Constraints>(
                 }
             }
 
-            domains[x].swap_remove(i);
+            domains[x].remove(i);
             revision = Revision::Changed;
 
             if domains[x].is_empty() {
@@ -96,7 +96,7 @@ fn revise<C: Constraints>(
 /// The MAC-3 algorithm due to Mackworth 1977.
 pub fn mac_3<C>(
     x: Var,
-    domains: &mut Vec<Domain<Value>>,
+    domains: &mut Vec<StateVec<Value>>,
     constraints: &C,
     trail: &mut Vec<Var>,
     stats: &mut Stats,
@@ -117,7 +117,7 @@ where
 }
 
 /// The MAC-3 algorithm due to Mackworth 1977.
-pub fn ac_3<C>(domains: &mut Vec<Domain<Value>>, constraints: &C, stats: &mut Stats) -> bool
+pub fn ac_3<C>(domains: &mut Vec<StateVec<Value>>, constraints: &C, stats: &mut Stats) -> bool
 where
     C: Constraints,
 {
@@ -134,7 +134,7 @@ where
 }
 
 pub fn solve<C>(
-    domains: &mut Vec<Domain<Value>>,
+    domains: &mut Vec<StateVec<Value>>,
     constraints: &C,
     stats: &mut Stats,
     out: impl FnMut(Vec<Value>),
@@ -155,14 +155,14 @@ pub fn solve<C>(
     stats.mac3_time = t_end;
 }
 
-fn debug_print(domains: &Vec<Domain<Value>>) {
+fn debug_print(domains: &Vec<StateVec<Value>>) {
     for (i, d) in domains.iter().enumerate() {
         println!("{:?} -> {:?}", i, d.iter().collect::<Vec<_>>());
     }
 }
 
 fn solve_iterative<C>(
-    domains: &mut Vec<Domain<Value>>,
+    domains: &mut Vec<StateVec<Value>>,
     constraints: &C,
     stats: &mut Stats,
     mut out: impl FnMut(Vec<Value>),
@@ -171,7 +171,7 @@ fn solve_iterative<C>(
     C: Constraints,
 {
     let variables: Vec<Var> = (0..domains.len())
-        .sorted_by_key(|&x| domains[x].size())
+        .sorted_by_key(|&x| domains[x].vlen())
         .collect();
     let mut assignments = vec![0; domains.len()];
     let mut states: Vec<Vec<Var>> = Vec::new();
@@ -194,7 +194,7 @@ fn solve_iterative<C>(
         let x = variables[depth];
         let a = assignments[depth];
 
-        if a == domains[x].size() {
+        if a == domains[x].vlen() {
             trace!("    - Tried every assigment for {}, backtracking...", x);
             if depth == 0 {
                 // Search space exhausted
@@ -212,7 +212,7 @@ fn solve_iterative<C>(
 
         trace!("    - Assignment: {} -> {}", x, a);
         domains[x].save_state();
-        domains[x].assign(a);
+        domains[x].set(a);
         stats.assignments += 1;
         assignments[depth] = a + 1;
 

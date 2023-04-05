@@ -4,7 +4,7 @@ use std::{collections::HashMap, hash::Hash};
 use crate::graph::traits::Digraph;
 
 use super::{
-    domain::Domain,
+    state_vec::StateVec,
     solve::{ac_3, solve, Stats},
 };
 
@@ -16,7 +16,7 @@ pub type Assignment = (Var, Value);
 /// A graph homomorphism problem.
 #[derive(Clone)]
 pub struct Problem<X, A> {
-    domains: Vec<Domain<usize>>,
+    domains: Vec<StateVec<usize>>,
     constraint: HomomorphismConstraint,
     variable_indices: IndexSet<X>,
     value_indices: IndexSet<A>,
@@ -39,7 +39,7 @@ where
         let h_index = |a: &A| value_indices.get_index_of(a).unwrap();
 
         let domains: Vec<_> = (0..g.vertex_count())
-            .map(|_| Domain::from_iter(0..value_indices.len()))
+            .map(|_| StateVec::from_iter(0..value_indices.len()))
             .collect();
         let arcs: Vec<_> = g
             .edges()
@@ -66,7 +66,7 @@ where
     pub fn precolor(&mut self, x: X, a: A) {
         let var_index = self.variable_indices.get_index_of(&x).unwrap();
         let val_index = self.value_indices.get_index_of(&a).unwrap();
-        self.domains[var_index] = Domain::from_iter([val_index]);
+        self.domains[var_index] = StateVec::from_iter([val_index]);
     }
 
     pub fn set_list<I>(&mut self, x: X, list: I)
@@ -75,7 +75,7 @@ where
     {
         let var_index = self.variable_indices.get_index_of(&x).unwrap();
         let val_index = |a| self.value_indices.get_index_of(&a).unwrap();
-        self.domains[var_index] = Domain::from_iter(list.into_iter().map(val_index));
+        self.domains[var_index] = StateVec::from_iter(list.into_iter().map(val_index));
     }
 
     pub fn stats(&self) -> Stats {
@@ -83,7 +83,7 @@ where
     }
 
     pub fn all_singleton(&self) -> bool {
-        self.domains.iter().all(|d| d.size() == 1)
+        self.domains.iter().all(|d| d.vlen() == 1)
     }
 
     pub fn make_arc_consistent(&mut self) -> bool {

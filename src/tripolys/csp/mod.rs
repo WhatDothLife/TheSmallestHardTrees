@@ -1,6 +1,6 @@
 //! Utilities for defining a CSP and solving it.
 
-mod domain;
+mod state_vec;
 mod solve;
 mod problem;
 
