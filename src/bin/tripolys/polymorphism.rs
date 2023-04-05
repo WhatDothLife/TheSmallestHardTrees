@@ -164,12 +164,10 @@ pub fn command(args: &ArgMatches) -> CmdResult {
         .into_par_iter()
         .map(|h| {
             let mut problem = polymorphism.problem(&h);
-            let found = problem.solution_exists();
-            let graph = edge_list(h);
 
             Record {
-                graph,
-                found,
+                graph: edge_list(h),
+                found: problem.solution_exists(),
                 stats: if !no_stats {
                     Some(problem.stats())
                 } else {
@@ -206,7 +204,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
     Ok(())
 }
 
-/// A struct which allows to store recorded data during the polymorphism search.
+/// A struct which stores recorded data during the polymorphism search.
 #[derive(Debug, Default)]
 struct Record {
     pub graph: String,
@@ -239,7 +237,7 @@ impl Serialize for Record {
 }
 
 fn parse_condition(s: &str) -> Result<Polymorphisms, String> {
-    match &*s.to_ascii_lowercase() {
+    match s.to_ascii_lowercase().as_str() {
         "majority" => Ok(Polymorphisms::majority()),
         "siggers" => Ok(Polymorphisms::siggers()),
         "kmm" => Ok(Polymorphisms::kmm()),
