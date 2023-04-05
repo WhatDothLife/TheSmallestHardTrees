@@ -4,8 +4,6 @@
 //! conditions of directed graphs. It also implements an algorithm to generate
 //! orientations of trees, and core orientations of trees.
 
-#![feature(is_some_and)]
-
 use std::error::Error;
 
 use clap::{App, AppSettings};

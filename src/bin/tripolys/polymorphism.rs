@@ -177,7 +177,12 @@ pub fn command(args: &ArgMatches) -> CmdResult {
                 },
             }
         })
-        .filter(|record| !filter.is_some_and(|x| x ^ record.found))
+        .filter(|record| {
+            !(match filter {
+                None => false,
+                Some(x) => x ^ record.found,
+            })
+        })
         .collect();
 
     let t_end = t_start.elapsed();

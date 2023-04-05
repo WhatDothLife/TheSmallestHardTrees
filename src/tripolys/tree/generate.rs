@@ -72,7 +72,7 @@ fn collect_children(m: usize, k: usize, rooted_trees: &[Vec<Arc<Tree>>]) -> Vec<
                 .map(|a| rooted_trees[a].iter().cloned())
                 .multi_cartesian_product()
         })
-        .filter(|vec| vec.is_sorted()) // excludes permutations
+        .filter(|vec| vec.windows(2).all(|w| w[0] <= w[1])) // excludes permutations
         .collect()
 }
 
@@ -81,9 +81,14 @@ fn connect(children: Vec<Arc<Tree>>) -> Vec<Tree> {
         .map(|_| [true, false])
         .multi_cartesian_product()
         .map(|edges| children.iter().cloned().zip(edges))
-        .filter(|v| v.clone().is_sorted())
-        .map(|t| t.collect())
-        .collect()
+        .filter_map(|v| {
+            if v.clone().tuple_windows().all(|(a, b)| a <= b) {
+                Some(v.collect())
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<Tree>>()
 }
 
 fn trees(n: usize, rooted_trees: &[Vec<Arc<Tree>>]) -> Vec<Tree> {
