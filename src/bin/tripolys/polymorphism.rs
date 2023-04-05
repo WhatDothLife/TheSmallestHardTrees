@@ -190,9 +190,14 @@ pub fn command(args: &ArgMatches) -> CmdResult {
     println!("  > Writing results...",);
 
     let mut wtr = WriterBuilder::new()
-        .has_headers(true)
+        .has_headers(false)
         .delimiter(b';')
         .from_path(output)?;
+    let mut header = vec!["graph", condition];
+    if !no_stats {
+        header.extend(&["backtracks", "ac3_time", "mac3_time", "total_time"]);
+    }
+    wtr.write_record(&header)?;
 
     for record in results {
         wtr.serialize(record)?;
