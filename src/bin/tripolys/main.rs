@@ -66,34 +66,24 @@ fn parse_graph<G>(s: &str) -> Result<G, &str>
 where
     G: Build<Vertex = usize>,
 {
-    if let Ok(class) = from_class(s) {
-        return Ok(class);
-    }
-    if let Ok(triad) = triad(s) {
-        return Ok(triad);
-    }
-    if let Ok(graph) = parse_edge_list(s) {
-        return Ok(graph);
-    }
-    Err("Could not parse graph from the given argument")
-}
-
-fn from_class<G>(class: &str) -> Result<G, &str>
-where
-    G: Build<Vertex = usize>,
-{
-    if let Some(g) = class.chars().next() {
-        if let Ok(n) = &class[1..].parse::<usize>() {
+    if let Some(g) = s.chars().next() {
+        if let Ok(n) = &s[1..].parse::<usize>() {
             match g {
                 'k' => return Ok(complete_digraph(*n)),
                 'c' => return Ok(directed_cycle(*n)),
                 'p' => return Ok(directed_path(*n)),
                 't' => return Ok(transitive_tournament(*n)),
-                _ => return Err("No graph class registered with that name"),
+                _ => {}
             }
         }
     }
-    Err("No graph class registered with that name")
+    if let Ok(triad) = triad(s) {
+        Ok(triad)
+    } else if let Ok(graph) = parse_edge_list(s) {
+        Ok(graph)
+    } else {
+        Err("Could not parse graph from the given argument")
+    }
 }
 
 #[rustfmt::skip]
