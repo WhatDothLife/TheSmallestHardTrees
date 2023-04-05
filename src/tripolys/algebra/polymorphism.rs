@@ -376,14 +376,14 @@ impl Polymorphisms {
     /// The size of the indicator digraph grows exponentially with the
     /// arity of the function symbols in the condition and linearly with
     /// number of function symbols.
-     pub fn indicator_graph<V: Copy + Eq + Hash>(&self, graph: &AdjList<V>) -> AdjList<Term<V>> {
+     pub fn indicator_graph<V: Copy + Eq + Hash>(&self, h: &AdjList<V>) -> AdjList<Term<V>> {
         // Construct for each function symbol the categorical power of H of
         // the corresponding arity, and take their disjoint union.
         let mut ind_edges: Vec<_> = self
             .ops
             .iter()
             .flat_map(|(symbol, arity)| {
-                graph
+                h
                     .edges()
                     .kproduct_tuples(*arity)
                     .map(move |(u, v)| (Term::new(symbol, u), Term::new(symbol, v)))
@@ -394,7 +394,7 @@ impl Polymorphisms {
             // For every function symbol (say of arity k) we construct only the
             // subgraph of H^k consisting of all same-level k-tuples
             // (i.e., tuples in which all vertices are from the same level).
-            if let Some(lvls) = levels(graph) {
+            if let Some(lvls) = levels(h) {
                 ind_edges.retain(|(u, _)| {
                     u.arguments()
                         .iter()
@@ -424,7 +424,7 @@ impl Polymorphisms {
                             .unique()
                             .collect();
 
-                        for values in graph.vertices().kproduct(unbound_vars.len()) {
+                        for values in h.vertices().kproduct(unbound_vars.len()) {
                             let mut binding = binding.clone();
                             binding.extend(zip(unbound_vars.clone(), values));
                             let mapped = rhs.map(|x| *binding.get(&x).unwrap());
