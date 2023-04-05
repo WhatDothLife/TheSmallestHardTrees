@@ -113,6 +113,30 @@ macro_rules! condition {
 }
 
 impl Polymorphisms {
+    /// Parses a system of linear identities from a string that the
+    /// polymorphisms must satisfy.
+    ///
+    /// The input string should contain a list of linear identities separated by
+    /// commas. The terms that are not constants are of the form `f(v1...vn)`,
+    /// where `v1`, `v2`, ..., `vn`, are variables. Note, that they're not
+    /// separated by commas because of brevity. Variables can be any non-empty
+    /// sequence of characters that does not contain the `(`, `)`, `=`, or `,`
+    /// characters.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use tripolys::graph::AdjList;
+    /// use tripolys::graph::classes::triad;
+    /// use tripolys::algebra::Polymorphisms;
+    ///
+    /// let kmm = "p(xyy)=q(yxx)=q(xxy), p(xyx)=q(xyx)";
+    ///
+    /// let triad: AdjList<_> = triad("0,0,0").unwrap();
+    /// let exists = Polymorphisms::parse(kmm).unwrap().exist(&triad);
+    ///
+    /// assert!(exists);
+    /// ```
     pub fn parse(s: &str) -> Result<Self, String> {
         parse(s)
     }
@@ -230,6 +254,21 @@ impl Polymorphisms {
     }
 
     /// f(a,a,…,a) = a
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tripolys::graph::AdjList;
+    /// use tripolys::graph::classes::triad;
+    /// use tripolys::algebra::Polymorphisms;
+    ///
+    /// let triad: AdjList<_> = triad("01001111,101000,011000").unwrap();
+    /// let exists = Polymorphisms::wnu(3)
+    ///     .idempotent(true)
+    ///     .exist(&triad);
+    ///
+    /// assert!(!exists);
+    /// ```
     pub fn idempotent(mut self, flag: bool) -> Self {
         if flag {
             for (symbol, arity) in &self.ops {
