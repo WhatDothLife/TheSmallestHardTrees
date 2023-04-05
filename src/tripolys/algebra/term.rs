@@ -12,7 +12,7 @@ pub struct Term<T> {
     arguments: Vec<T>,
 }
 
-impl<T: Copy> Term<T> {
+impl<T: Copy + Hash + Eq> Term<T> {
     /// Creates a new `Term` with the given operation symbol and arguments.
     pub fn new<I>(symbol: &str, arguments: I) -> Term<T>
     where
@@ -35,8 +35,13 @@ impl<T: Copy> Term<T> {
     }
 
     /// Returns a slice of the arguments of the `Term`.
-    pub fn arguments(&self) -> &[T] {
+    pub fn args(&self) -> &[T] {
         &self.arguments
+    }
+
+    /// Returns the number of unique arguments of the `Term`.
+    pub fn arg_count(&self) -> usize {
+        self.arguments.iter().unique().count()
     }
 
     /// Maps a `Term<T>` to `Term<U>` by applying a function to the arguments.
@@ -63,7 +68,7 @@ impl<T: Copy> Term<T> {
         }
         let mut map = HashMap::new();
 
-        for (a, b) in zip(self.arguments(), other.arguments()) {
+        for (a, b) in zip(self.args(), other.args()) {
             if !map.contains_key(a) {
                 map.insert(*a, *b);
             } else if let Some(&val) = map.get(a) {

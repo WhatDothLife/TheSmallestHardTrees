@@ -54,11 +54,6 @@ impl std::fmt::Display for ParseError {
 
 impl std::error::Error for ParseError {}
 
-/// Checks if both sides have exactly two variables
-fn level_wise<V: Copy + Hash + Eq>(lhs: &Term<V>, rhs: &Term<V>) -> bool {
-    lhs.arguments().iter().unique().count() == 2 && rhs.arguments().iter().unique().count() == 2
-}
-
 fn parse(s: &str) -> Result<Polymorphisms, ParseError> {
     let trimmed = s.trim();
     if trimmed.is_empty() {
@@ -100,7 +95,7 @@ fn parse(s: &str) -> Result<Polymorphisms, ParseError> {
 
         if let Some(c) = constant {
             for term in &terms {
-                if !term.arguments().contains(&c) {
+                if !term.args().contains(&c) {
                     return Err(ParseError::UnboundConstant(c));
                 }
                 non_h1.push((term.clone(), c));
@@ -111,19 +106,21 @@ fn parse(s: &str) -> Result<Polymorphisms, ParseError> {
         }
     }
 
-    let level_wise = h1
+    let per_identity = h1
         .iter()
-        .flat_map(|(lhs, rhs)| chain(lhs.arguments(), rhs.arguments()))
+        .all(|(lhs, rhs)| lhs.arg_count() == 2 && rhs.arg_count() == 2);
+    let total = h1
+        .iter()
+        .flat_map(|(lhs, rhs)| chain(lhs.args(), rhs.args()))
         .unique()
         .count()
-        == 2
-        && h1.iter().all(|(lhs, rhs)| level_wise(lhs, rhs));
+        == 2;
 
     Ok(Polymorphisms {
         ops: operations.into_iter().collect(),
         non_h1,
         h1,
-        level_wise,
+        level_wise: total && per_identity,
         conservative: false,
     })
 }
@@ -344,12 +341,8 @@ impl Polymorphisms {
             // subgraph of H^k consisting of all same-level k-tuples
             // (i.e., tuples in which all vertices are from the same level).
             if let Some(lvls) = levels(h) {
-                ind_edges.retain(|(u, _)| {
-                    u.arguments()
-                        .iter()
-                        .map(|v| lvls.get(v).unwrap())
-                        .all_equal()
-                });
+                ind_edges
+                    .retain(|(u, _)| u.args().iter().map(|v| lvls.get(v).unwrap()).all_equal());
             }
         }
         let mut ind_graph = AdjList::from_edges(ind_edges);
@@ -366,7 +359,7 @@ impl Polymorphisms {
                 for (lhs, rhs) in self.h1.iter().flat_map(|(a, b)| [(a, b), (b, a)]) {
                     if let Some(binding) = lhs.match_with(&v) {
                         let unbound_vars: Vec<_> = rhs
-                            .arguments()
+                            .args()
                             .iter()
                             .copied()
                             .filter(|v| binding.get(v).is_none())
@@ -423,7 +416,7 @@ impl Polymorphisms {
 
         if self.conservative {
             for v in indicator.vertices() {
-                problem.set_list(v.clone(), v.arguments().to_vec());
+                problem.set_list(v.clone(), v.args().to_vec());
             }
         }
 
@@ -778,10 +771,7 @@ mod tests {
             Polymorphisms::parse(constant),
             Err(ParseError::UnboundConstant('z'))
         );
-        assert_eq!(
-            Polymorphisms::parse(empty),
-            Err(ParseError::EmptyString)
-        );
+        assert_eq!(Polymorphisms::parse(empty), Err(ParseError::EmptyString));
         assert_eq!(
             Polymorphisms::parse(malformed1),
             Err(ParseError::MalformedEquation)
