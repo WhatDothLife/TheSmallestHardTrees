@@ -1,5 +1,6 @@
 use super::iteralgebra::IterAlgebra;
 use super::levels;
+use super::term::Term;
 
 use crate::csp::Problem;
 use crate::graph::traits::{Edges, Vertices};
@@ -8,109 +9,10 @@ use crate::graph::AdjList;
 use indexmap::IndexSet;
 use itertools::{chain, Itertools};
 use std::collections::HashMap;
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 use std::hash::Hash;
 use std::iter::zip;
 use std::str::FromStr;
-
-/// Represents a term of the form f(x,y,..,z).
-#[derive(Clone, Hash, Eq, PartialEq)]
-pub struct Term<T> {
-    symbol: String,
-    arguments: Vec<T>,
-}
-
-impl<T: Copy> Term<T> {
-    /// Creates a new `Term` with the given operation symbol and arguments.
-    pub fn new<I>(symbol: &str, arguments: I) -> Term<T>
-    where
-        I: IntoIterator<Item = T>,
-    {
-        Term {
-            symbol: symbol.to_owned(),
-            arguments: Vec::from_iter(arguments),
-        }
-    }
-
-    /// Returns the arity (i.e. number of arguments) of the `Term`.
-    pub fn arity(&self) -> usize {
-        self.arguments.len()
-    }
-
-    /// Returns the operation symbol of the `Term`.
-    pub fn symbol(&self) -> &str {
-        &self.symbol
-    }
-
-    /// Returns a slice of the arguments of the `Term`.
-    pub fn arguments(&self) -> &[T] {
-        &self.arguments
-    }
-
-    /// Maps a `Term<T>` to `Term<U>` by applying a function to the arguments.
-    pub fn map<U, F>(&self, op: F) -> Term<U>
-    where
-        F: FnMut(T) -> U,
-    {
-        Term {
-            symbol: self.symbol.clone(),
-            arguments: self.arguments.clone().into_iter().map(op).collect(),
-        }
-    }
-
-    /// Tries to match this `Term` with another `Term` `other`, by finding a substitution for the
-    /// variables in the arguments of `self` that makes `self` equal to `other`. If successful,
-    /// returns a `Some` containing the mapping of variable bindings. If not, returns `None`.
-    pub fn match_with<U>(&self, other: &Term<U>) -> Option<HashMap<T, U>>
-    where
-        T: Eq + Hash,
-        U: Copy + Eq + Hash,
-    {
-        if self.symbol() != other.symbol() {
-            return None;
-        }
-        let mut map = HashMap::new();
-
-        for (a, b) in zip(self.arguments(), other.arguments()) {
-            if !map.contains_key(a) {
-                map.insert(*a, *b);
-            } else if let Some(&val) = map.get(a) {
-                if val != *b {
-                    return None;
-                }
-            } else {
-                return None;
-            }
-        }
-        Some(map)
-    }
-}
-
-impl FromStr for Term<char> {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (symbol, rest) = s.trim().split_once('(').ok_or("Invalid term format")?;
-        let args = rest.trim_end_matches(')').chars();
-        Ok(Term::new(symbol, args))
-    }
-}
-impl<T: Debug> Debug for Term<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}({:?})",
-            self.symbol,
-            self.arguments.iter().format(",")
-        )
-    }
-}
-
-impl<T: Display> Display for Term<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}({})", self.symbol, self.arguments.iter().format(","))
-    }
-}
 
 /// Operations D<sup>3</sup> → D that must satisfy a system of linear identities.
 #[derive(Clone, Debug)]
@@ -125,23 +27,6 @@ pub struct Polymorphisms {
     pub(crate) level_wise: bool,
     // Whether the polymorphisms must be conservative
     pub(crate) conservative: bool,
-}
-
-fn print_identities(identities: &Polymorphisms) {
-    println!("Operation-symbols:");
-    for (symbol, arity) in &identities.ops {
-        println!("{symbol}, arity: {arity}");
-    }
-
-    println!("\nNon-height1 equations:");
-    for (term, constant) in &identities.non_h1 {
-        println!("{term}={constant}");
-    }
-
-    println!("\nHeight1 equations:");
-    for (lhs, rhs) in &identities.h1 {
-        println!("{lhs}={rhs}");
-    }
 }
 
 /// Checks if both sides have exactly two variables
@@ -376,15 +261,14 @@ impl Polymorphisms {
     /// The size of the indicator digraph grows exponentially with the
     /// arity of the function symbols in the condition and linearly with
     /// number of function symbols.
-     pub fn indicator_graph<V: Copy + Eq + Hash>(&self, h: &AdjList<V>) -> AdjList<Term<V>> {
+    pub fn indicator_graph<V: Copy + Eq + Hash>(&self, h: &AdjList<V>) -> AdjList<Term<V>> {
         // Construct for each function symbol the categorical power of H of
         // the corresponding arity, and take their disjoint union.
         let mut ind_edges: Vec<_> = self
             .ops
             .iter()
             .flat_map(|(symbol, arity)| {
-                h
-                    .edges()
+                h.edges()
                     .kproduct_tuples(*arity)
                     .map(move |(u, v)| (Term::new(symbol, u), Term::new(symbol, v)))
             })

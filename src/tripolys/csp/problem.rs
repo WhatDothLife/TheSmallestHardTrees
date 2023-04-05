@@ -4,8 +4,8 @@ use std::{collections::HashMap, hash::Hash};
 use crate::graph::traits::Digraph;
 
 use super::{
-    state_vec::StateVec,
     solve::{ac_3, solve, Stats},
+    state_vec::StateVec,
 };
 
 pub type Var = usize;
@@ -212,10 +212,7 @@ mod matrix {
     }
 
     impl Matrix {
-        pub fn from_edges<I>(edges: I) -> Self
-        where
-            I: IntoIterator<Item = (usize, usize)>,
-        {
+        pub fn from_edges<I: IntoIterator<Item = (usize, usize)>>(edges: I) -> Self {
             let edges = Vec::from_iter(edges);
 
             let mut num_vertices = 0;
