@@ -15,7 +15,7 @@ use std::iter::zip;
 use std::str::FromStr;
 
 /// Operations D<sup>3</sup> → D that must satisfy a system of linear identities.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Polymorphisms {
     // Operation symbols and their arity
     pub(crate) ops: Vec<(String, usize)>,
@@ -29,17 +29,46 @@ pub struct Polymorphisms {
     pub(crate) conservative: bool,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum ParseError {
+    EmptyString,
+    MalformedEquation,
+    AmbiguousArity(String),
+    UnboundConstant(char),
+    OneElementStructure(char, char),
+}
+
+impl std::fmt::Display for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParseError::EmptyString => write!(f, "String is empty"),
+            ParseError::MalformedEquation => write!(f, "Failed to parse identities"),
+            ParseError::AmbiguousArity(symbol) => write!(f, "{} has ambiguous arity", symbol),
+            ParseError::UnboundConstant(c) => write!(f, "Constant {} is not bound by term", c),
+            ParseError::OneElementStructure(c, d) => {
+                write!(f, "{} = {} only satisfied for one element structures", c, d)
+            }
+        }
+    }
+}
+
+impl std::error::Error for ParseError {}
+
 /// Checks if both sides have exactly two variables
 fn level_wise<V: Copy + Hash + Eq>(lhs: &Term<V>, rhs: &Term<V>) -> bool {
     lhs.arguments().iter().unique().count() == 2 && rhs.arguments().iter().unique().count() == 2
 }
 
-fn parse(s: &str) -> Result<Polymorphisms, String> {
+fn parse(s: &str) -> Result<Polymorphisms, ParseError> {
+    let trimmed = s.trim();
+    if trimmed.is_empty() {
+        return Err(ParseError::EmptyString);
+    }
     let mut operations = HashMap::new();
     let mut non_h1 = Vec::new();
     let mut h1: Vec<(Term<char>, Term<char>)> = Vec::new();
 
-    for eq_str in s.trim().split([',', '\n']).filter(|x| !x.is_empty()) {
+    for eq_str in trimmed.split([',', '\n']).filter(|x| !x.is_empty()) {
         let mut constant = None;
         let mut terms = Vec::new();
 
@@ -47,7 +76,7 @@ fn parse(s: &str) -> Result<Polymorphisms, String> {
             if let Ok(term) = Term::from_str(st) {
                 if let Some(k) = operations.get(term.symbol()) {
                     if *k != term.arity() {
-                        return Err(format!("{} has ambiguous arity", term.symbol()));
+                        return Err(ParseError::AmbiguousArity(term.symbol().into()));
                     }
                 } else {
                     operations.insert(term.symbol().to_owned(), term.arity());
@@ -55,27 +84,24 @@ fn parse(s: &str) -> Result<Polymorphisms, String> {
                 terms.push(term);
             } else if let Some(c) = st.trim().chars().next() {
                 if let Some(d) = constant {
-                    return Err(format!(
-                        "{} = {} only satisfied for one element structures",
-                        c, d
-                    ));
+                    return Err(ParseError::OneElementStructure(c, d));
                 }
                 constant = Some(c);
             } else {
-                return Err("Malformed equation".to_owned());
+                return Err(ParseError::MalformedEquation);
             }
         }
         if terms.len() == 0 {
-            return Err("Equation is missing a term".to_owned());
+            return Err(ParseError::MalformedEquation);
         }
         if constant.is_none() && terms.len() == 1 {
-            return Err("Equation is missing a term".to_owned());
+            return Err(ParseError::MalformedEquation);
         }
 
         if let Some(c) = constant {
             for term in &terms {
                 if !term.arguments().contains(&c) {
-                    return Err("Constant is not bound by term".to_owned());
+                    return Err(ParseError::UnboundConstant(c));
                 }
                 non_h1.push((term.clone(), c));
             }
@@ -117,11 +143,11 @@ impl Polymorphisms {
     /// polymorphisms must satisfy.
     ///
     /// The input string should contain a list of linear identities separated by
-    /// commas. The terms that are not constants are of the form `f(v1...vn)`,
-    /// where `v1`, `v2`, ..., `vn`, are variables. Note, that they're not
-    /// separated by commas because of brevity. Variables can be any non-empty
-    /// sequence of characters that does not contain the `(`, `)`, `=`, or `,`
-    /// characters.
+    /// commas or newlines. The terms that are not constants are of the form
+    /// `f(v1...vn)`, where `v1`, `v2`, ..., `vn`, are variables. Note, that
+    /// they're not separated by commas because of brevity. Variables can be any
+    /// non-empty sequence of characters that does not contain the `(`, `)`,
+    /// `=`, or `,` characters.
     ///
     /// # Example
     ///
@@ -137,7 +163,7 @@ impl Polymorphisms {
     ///
     /// assert!(exists);
     /// ```
-    pub fn parse(s: &str) -> Result<Self, String> {
+    pub fn parse(s: &str) -> Result<Self, ParseError> {
         parse(s)
     }
 
@@ -730,5 +756,39 @@ mod tests {
         ]);
         let hami = Polymorphisms::hagemann_mitschke(8).exist(&graph);
         assert!(hami);
+    }
+
+    #[test]
+    fn test_parse_identities() {
+        let input = "p(xyy)=q(yxx)=q(xxy), p(xyx)=q(xyx)";
+        let error = "p(xyy)=q(yxx)=q(xxy), p(xyx)q(xyx)";
+        let arity = "p(xyy)=q(yxx)=q(xxy), p(xyx)=q(xyxx)";
+        let constant = "p(xyy)=q(yxx)=q(xxy), p(xyx)=q(xyx)=z";
+        let empty = "";
+        let malformed1 = "p(xyy)";
+        let malformed2 = "x";
+
+        assert!(Polymorphisms::parse(error).is_err());
+        assert!(Polymorphisms::parse(input).is_ok());
+        assert_eq!(
+            Polymorphisms::parse(arity),
+            Err(ParseError::AmbiguousArity("q".into()))
+        );
+        assert_eq!(
+            Polymorphisms::parse(constant),
+            Err(ParseError::UnboundConstant('z'))
+        );
+        assert_eq!(
+            Polymorphisms::parse(empty),
+            Err(ParseError::EmptyString)
+        );
+        assert_eq!(
+            Polymorphisms::parse(malformed1),
+            Err(ParseError::MalformedEquation)
+        );
+        assert_eq!(
+            Polymorphisms::parse(malformed2),
+            Err(ParseError::MalformedEquation)
+        );
     }
 }
