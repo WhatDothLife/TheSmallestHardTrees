@@ -19,10 +19,10 @@ use std::str::FromStr;
 pub struct Polymorphisms {
     // Operation symbols and their arity
     ops: Vec<(String, usize)>,
-    // Equations of the form f(x...z)=d
-    non_h1: Vec<(Term<char>, char)>,
-    // Equations of the form f(x...z)=f(a...c)
-    h1: Vec<(Term<char>, Term<char>)>,
+    // Identities of the form f(x1,…,xn)=x
+    non_height1: Vec<(Term<char>, char)>,
+    // Identities of the form f(x1,…,xn)=g(y1,…,ym)
+    height1: Vec<(Term<char>, Term<char>)>,
     // Whether the identities can be satisfied level-wise
     level_wise: bool,
     // Whether the polymorphisms must be conservative
@@ -31,8 +31,8 @@ pub struct Polymorphisms {
 
 #[derive(Debug, PartialEq)]
 pub enum ParseError {
-    EmptyString,
-    MalformedEquation,
+    Empty,
+    MalformedIdentity,
     AmbiguousArity(String),
     UnboundConstant(char),
     OneElementStructure(char, char),
@@ -41,12 +41,16 @@ pub enum ParseError {
 impl std::fmt::Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ParseError::EmptyString => write!(f, "String is empty"),
-            ParseError::MalformedEquation => write!(f, "Failed to parse identities"),
+            ParseError::Empty => write!(f, "cannot parse identities from empty string"),
+            ParseError::MalformedIdentity => write!(f, "identity is malformed"),
             ParseError::AmbiguousArity(symbol) => write!(f, "{} has ambiguous arity", symbol),
-            ParseError::UnboundConstant(c) => write!(f, "Constant {} is not bound by term", c),
+            ParseError::UnboundConstant(c) => write!(f, "constant {} is not bound by any term", c),
             ParseError::OneElementStructure(c, d) => {
-                write!(f, "{} = {} only satisfied for one element structures", c, d)
+                write!(
+                    f,
+                    "{} = {} is only satisfied for one element structures",
+                    c, d
+                )
             }
         }
     }
@@ -55,15 +59,18 @@ impl std::fmt::Display for ParseError {
 impl std::error::Error for ParseError {}
 
 fn parse(s: &str) -> Result<Polymorphisms, ParseError> {
+    if s.is_empty() {
+        return Err(ParseError::Empty);
+    }
     let trimmed = s.trim();
     if trimmed.is_empty() {
-        return Err(ParseError::EmptyString);
+        return Err(ParseError::MalformedIdentity);
     }
     let mut operations = HashMap::new();
     let mut non_h1 = Vec::new();
     let mut h1: Vec<(Term<char>, Term<char>)> = Vec::new();
 
-    for eq_str in trimmed.split([',', '\n']).filter(|x| !x.is_empty()) {
+    for eq_str in trimmed.split([',', '\n', ' ']).filter(|x| !x.is_empty()) {
         let mut constant = None;
         let mut terms = Vec::new();
 
@@ -83,14 +90,14 @@ fn parse(s: &str) -> Result<Polymorphisms, ParseError> {
                 }
                 constant = Some(c);
             } else {
-                return Err(ParseError::MalformedEquation);
+                return Err(ParseError::MalformedIdentity);
             }
         }
         if terms.len() == 0 {
-            return Err(ParseError::MalformedEquation);
+            return Err(ParseError::MalformedIdentity);
         }
         if constant.is_none() && terms.len() == 1 {
-            return Err(ParseError::MalformedEquation);
+            return Err(ParseError::MalformedIdentity);
         }
 
         if let Some(c) = constant {
@@ -118,8 +125,8 @@ fn parse(s: &str) -> Result<Polymorphisms, ParseError> {
 
     Ok(Polymorphisms {
         ops: operations.into_iter().collect(),
-        non_h1,
-        h1,
+        non_height1: non_h1,
+        height1: h1,
         level_wise: total && per_identity,
         conservative: false,
     })
@@ -129,8 +136,8 @@ macro_rules! condition {
     ($name:ident, $($eq:expr),+ $(,)?) => {
         #[doc = concat!($(concat!("- ", $eq, "\n")),+)]
         pub fn $name() -> Polymorphisms {
-            let equation = concat!($($eq, ",",)+);
-            Polymorphisms::parse(equation).unwrap()
+            let identities = concat!($($eq, ",",)+);
+            Polymorphisms::parse(identities).unwrap()
         }
     };
 }
@@ -160,8 +167,8 @@ impl Polymorphisms {
     ///
     /// assert!(exists);
     /// ```
-    pub fn parse(s: &str) -> Result<Self, ParseError> {
-        parse(s)
+    pub fn parse(identities: &str) -> Result<Self, ParseError> {
+        parse(identities)
     }
 
     condition!(siggers, "s(area)=s(rare)");
@@ -295,7 +302,7 @@ impl Polymorphisms {
     pub fn idempotent(mut self, flag: bool) -> Self {
         if flag {
             for (symbol, arity) in &self.ops {
-                self.non_h1
+                self.non_height1
                     .push((Term::new(symbol, (0..*arity).map(|_| 'x')), 'x'));
             }
         }
@@ -356,7 +363,7 @@ impl Polymorphisms {
             contracted.push(u.clone());
 
             while let Some(v) = contracted.pop() {
-                for (lhs, rhs) in self.h1.iter().flat_map(|(a, b)| [(a, b), (b, a)]) {
+                for (lhs, rhs) in self.height1.iter().flat_map(|(a, b)| [(a, b), (b, a)]) {
                     if let Some(binding) = lhs.match_with(&v) {
                         let unbound_vars: Vec<_> = rhs
                             .args()
@@ -407,7 +414,7 @@ impl Polymorphisms {
         // that comes from a tuple of vertices of H matching the left-hand side
         // and set its value to the vertex of H given by the right-hand side.
         for v in indicator.vertices() {
-            for (term, constant) in &self.non_h1 {
+            for (term, constant) in &self.non_height1 {
                 if let Some(bindings) = term.match_with(&v) {
                     problem.precolor(v.clone(), *bindings.get(constant).unwrap());
                 }
@@ -758,6 +765,7 @@ mod tests {
         let arity = "p(xyy)=q(yxx)=q(xxy), p(xyx)=q(xyxx)";
         let constant = "p(xyy)=q(yxx)=q(xxy), p(xyx)=q(xyx)=z";
         let empty = "";
+        let arsch = "   ";
         let malformed1 = "p(xyy)";
         let malformed2 = "x";
 
@@ -771,14 +779,18 @@ mod tests {
             Polymorphisms::parse(constant),
             Err(ParseError::UnboundConstant('z'))
         );
-        assert_eq!(Polymorphisms::parse(empty), Err(ParseError::EmptyString));
+        assert_eq!(Polymorphisms::parse(empty), Err(ParseError::Empty));
+        assert_eq!(
+            Polymorphisms::parse(arsch),
+            Err(ParseError::MalformedIdentity)
+        );
         assert_eq!(
             Polymorphisms::parse(malformed1),
-            Err(ParseError::MalformedEquation)
+            Err(ParseError::MalformedIdentity)
         );
         assert_eq!(
             Polymorphisms::parse(malformed2),
-            Err(ParseError::MalformedEquation)
+            Err(ParseError::MalformedIdentity)
         );
     }
 }
