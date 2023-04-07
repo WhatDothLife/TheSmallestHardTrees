@@ -1,7 +1,7 @@
 use indexmap::IndexSet;
 use std::{collections::HashMap, hash::Hash};
 
-use crate::graph::traits::Digraph;
+use crate::graph::{traits::Digraph, AdjList};
 
 use super::{
     solve::{ac_3, solve, Stats},
@@ -50,7 +50,7 @@ where
         let constraint = HomomorphismConstraint {
             arcs,
             neighbors,
-            g: matrix::Matrix::from_edges(g.edges().map(|(u, v)| (g_index(&u), g_index(&v)))),
+            g: AdjList::from_edges(g.edges().map(|(u, v)| (g_index(&u), g_index(&v)))),
             h: matrix::Matrix::from_edges(h.edges().map(|(u, v)| (h_index(&u), h_index(&v)))),
         };
 
@@ -156,7 +156,7 @@ where
 pub struct HomomorphismConstraint {
     arcs: Vec<(usize, usize)>,
     neighbors: Vec<Vec<(usize, usize)>>,
-    g: matrix::Matrix,
+    g: AdjList<usize>,
     h: matrix::Matrix,
 }
 
@@ -187,7 +187,7 @@ impl Constraints for HomomorphismConstraint {
     }
 
     fn check_arc(&self, (i, ai): Assignment, (j, aj): Assignment) -> bool {
-        if self.g.has_edge(i, j) {
+        if self.g.has_edge(&i, &j) {
             self.h.has_edge(ai, aj)
         } else {
             self.h.has_edge(aj, ai)

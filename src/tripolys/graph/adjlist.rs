@@ -68,6 +68,14 @@ impl<V: Hash + Clone + Eq> AdjList<V> {
         self.lists.contains_key(v)
     }
 
+    pub fn has_edge(&self, u: &V, v: &V) -> bool {
+        if let Some(neighbors) = self.lists.get(u) {
+            neighbors.outgoing.contains(v)
+        } else {
+            false
+        }
+    }
+
     pub fn contract_vertex(&mut self, u: &V, v: &V) -> bool {
         if u == v {
             return true;
