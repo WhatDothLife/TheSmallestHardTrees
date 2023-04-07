@@ -506,7 +506,7 @@ fn jonsson_chain(n: u32) -> String {
         result += &format!("j{}(xyy)=j{}(xyy)\n", 2 * i - 1, 2 * i);
     }
     for i in 1..=(2 * n + 1) {
-        result += &format!("j{}(yxy)=x\n", i);
+        result += &format!("j{}(xyx)=x\n", i);
     }
     for i in 1..=n {
         result += &format!("j{}(xxy)=j{}(xxy)\n", 2 * i, 2 * i + 1);
