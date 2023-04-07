@@ -16,14 +16,14 @@ _M. Bodirsky, J. Bulín, F. Starke, and M. Wernthaler. The smallest hard trees, 
 https://doi.org/10.48550/arXiv.2205.07528
  
 ```
-@misc{https://doi.org/10.48550/arxiv.2205.07528,
-  doi = {10.48550/ARXIV.2205.07528},
-  url = {https://arxiv.org/abs/2205.07528},
+@misc{https://doi.org/10.1007/s10601-023-09341-8,
+  doi = {10.1007/s10601-023-09341-8},
+  url = {https://link.springer.com/article/10.1007/s10601-023-09341-8},
   author = {Bodirsky, Manuel and Bulín, Jakub and Starke, Florian and Wernthaler, Michael},  
   keywords = {Rings and Algebras (math.RA), FOS: Mathematics, FOS: Mathematics, G.2.2, 08A70, 08B05},  
   title = {The Smallest Hard Trees},
-  publisher = {arXiv},
-  year = {2022},
+  publisher = {springer},
+  year = {2023},
   copyright = {Creative Commons Attribution Non Commercial Share Alike 4.0 International}
 }
 ```
@@ -104,7 +104,10 @@ tripolys polymorphism -g 10110000,1001111,010111 -c kmm
 
 ### The smallest NL-hard trees (Section 7.1.2)
 
-TODO
+```
+cd data/12
+tripolys polymorphism -i core_trees.edges -o core_trees_8-hami_deny.csv -c 8-hami -f deny
+```
 
 ### The smallest tree not solved by Datalog (Section 7.1.3)
 
@@ -133,11 +136,29 @@ cd data/16
 tripolys polymorphism -i core_trees.edges -o core_trees_majority_deny.csv -c majority -f deny
 ```
 
-(TODO how to run the tests for KK, HMcK, J?)
+```
+tripolys polymorphism -g '[(0,1),(0,5),(1,2),(2,3),(3,4),(5,11),(6,5),(6,8),(7,6),(8,9),(9,10),(12,11),(12,14),(13,12),(14,15)]' -c 2-homck
+```
+
+```
+tripolys polymorphism -g '[(0,1),(0,5),(1,2),(2,3),(3,4),(5,11),(6,5),(6,8),(7,6),(8,9),(9,10),(12,11),(12,14),(13,12),(14,15)]' -c 5-kk
+```
+
+```
+tripolys polymorphism -g '[(0,1),(0,5),(1,2),(2,3),(3,4),(5,11),(6,5),(6,8),(7,6),(8,9),(9,10),(12,11),(12,14),(13,12),(14,15)]' -c 1000-j
+```
 
 ### Trees that might be P-hard (Section 7.2.2)
 
-TODO
+```
+cd data/18
+tripolys polymorphism -i core_trees.edges -o core_trees_5-kk_deny.csv -c 5-kk -f deny
+```
+
+```
+tripolys polymorphism -i core_trees_5-kk_deny.csv -o core_trees_kk-1000.csv -c kk-1000
+tripolys polymorphism -i core_trees_5-kk_deny.csv -o core_trees_homck-1000.csv -c homck-1000
+```
 
 Other usage examples
 -----------------
@@ -147,9 +168,6 @@ tripolys polymorphism -g 1011000,1001111,010111 -c kmm -I
 ```
 ```
 tripolys polymorphism -g k3 -c 3-wnu -I
-```
-```
-tripolys homomorphism --from graph.csv --to t3
 ```
 ```
 tripolys homomorphism --from p5 --to c2
