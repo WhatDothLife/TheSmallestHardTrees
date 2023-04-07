@@ -18,15 +18,15 @@ use std::str::FromStr;
 #[derive(Clone, Debug, PartialEq)]
 pub struct Polymorphisms {
     // Operation symbols and their arity
-    pub(crate) ops: Vec<(String, usize)>,
+    ops: Vec<(String, usize)>,
     // Equations of the form f(x...z)=d
-    pub(crate) non_h1: Vec<(Term<char>, char)>,
+    non_h1: Vec<(Term<char>, char)>,
     // Equations of the form f(x...z)=f(a...c)
-    pub(crate) h1: Vec<(Term<char>, Term<char>)>,
+    h1: Vec<(Term<char>, Term<char>)>,
     // Whether the identities can be satisfied level-wise
-    pub(crate) level_wise: bool,
+    level_wise: bool,
     // Whether the polymorphisms must be conservative
-    pub(crate) conservative: bool,
+    conservative: bool,
 }
 
 #[derive(Debug, PartialEq)]
