@@ -19,14 +19,16 @@ use std::str::FromStr;
 pub struct Polymorphisms {
     // Operation symbols and their arity
     ops: Vec<(String, usize)>,
-    // Identities of the form f(x1,…,xn)=x
+    // Identities of the form f(x1,…,xn)=x the polymorphisms must satisfy
     non_height1: Vec<(Term<char>, char)>,
-    // Identities of the form f(x1,…,xn)=g(y1,…,ym)
+    // Identities of the form f(x1,…,xn)=g(y1,…,ym) the polymorphisms must satisfy
     height1: Vec<(Term<char>, Term<char>)>,
     // Whether the identities can be satisfied level-wise
     level_wise: bool,
     // Whether the polymorphisms must be conservative
     conservative: bool,
+    // Whether the polymorphisms must be idempotent
+    idempotent: bool,
 }
 
 #[derive(Debug, PartialEq)]
@@ -129,6 +131,7 @@ fn parse(s: &str) -> Result<Polymorphisms, ParseError> {
         height1: h1,
         level_wise: total && per_identity,
         conservative: false,
+        idempotent: false,
     })
 }
 
@@ -300,12 +303,7 @@ impl Polymorphisms {
     /// assert!(!exists);
     /// ```
     pub fn idempotent(mut self, flag: bool) -> Self {
-        if flag {
-            for (symbol, arity) in &self.ops {
-                self.non_height1
-                    .push((Term::new(symbol, (0..*arity).map(|_| 'x')), 'x'));
-            }
-        }
+        self.idempotent = flag;
         self
     }
 
@@ -333,6 +331,7 @@ impl Polymorphisms {
     pub fn indicator_graph<V: Copy + Eq + Hash>(&self, h: &AdjList<V>) -> AdjList<Term<V>> {
         // Construct for each function symbol the categorical power of H of
         // the corresponding arity, and take their disjoint union.
+
         let mut ind_edges: Vec<_> = self
             .ops
             .iter()
@@ -344,7 +343,7 @@ impl Polymorphisms {
             .collect();
 
         if self.level_wise {
-            // For every function symbol (say of arity k) we construct only the
+            // For every function symbol of arity k we construct only the
             // subgraph of H^k consisting of all same-level k-tuples
             // (i.e., tuples in which all vertices are from the same level).
             if let Some(lvls) = levels(h) {
@@ -409,12 +408,19 @@ impl Polymorphisms {
     pub fn problem<V: Copy + Eq + Hash>(&self, h: &AdjList<V>) -> Problem<Term<V>, V> {
         let indicator = self.indicator_graph(h);
         let mut problem = Problem::new(&indicator, h);
+        let mut non_height1 = self.non_height1.clone();
+
+        if self.idempotent {
+            for (symbol, arity) in &self.ops {
+                non_height1.push((Term::new(symbol, (0..*arity).map(|_| 'x')), 'x'));
+            }
+        }
 
         // For every identity that is not height-one, find every vertex of H^Ind
         // that comes from a tuple of vertices of H matching the left-hand side
         // and set its value to the vertex of H given by the right-hand side.
         for v in indicator.vertices() {
-            for (term, constant) in &self.non_height1 {
+            for (term, constant) in &non_height1 {
                 if let Some(bindings) = term.match_with(&v) {
                     problem.precolor(v.clone(), *bindings.get(constant).unwrap());
                 }
