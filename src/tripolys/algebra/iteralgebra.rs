@@ -57,6 +57,7 @@ where
     }
 }
 
+#[derive(Clone)]
 pub struct KProductTuples<A, B, I>
 where
     I: Iterator<Item = (A, B)> + Clone,
