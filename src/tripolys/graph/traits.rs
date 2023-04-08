@@ -104,15 +104,4 @@ pub trait Build: Default {
 
     /// Adds a new edge to the graph, connecting vertices `u` and `v`.
     fn add_edge(&mut self, u: Self::Vertex, v: Self::Vertex);
-
-    fn from_edges<I>(edges: I) -> Self
-    where
-        I: IntoIterator<Item = (Self::Vertex, Self::Vertex)>,
-    {
-        let mut g = Self::default();
-        for (u, v) in edges {
-            g.add_edge(u, v);
-        }
-        g
-    }
 }

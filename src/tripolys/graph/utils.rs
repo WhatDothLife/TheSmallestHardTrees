@@ -26,7 +26,12 @@ where
     if vertices.len() % 2 != 0 {
         return Err("Invalid edge list: odd number of vertices".to_owned());
     }
-    let g = G::from_edges(vertices.into_iter().tuples());
+    let mut g = G::default();
+    for (u, v) in vertices.into_iter().tuples() {
+        g.add_vertex(u);
+        g.add_vertex(v);
+        g.add_edge(u, v);
+    }
 
     Ok(g)
 }
