@@ -19,7 +19,7 @@ impl<V> Default for Neighbors<V> {
     }
 }
 
-/// `AdjList<V>` is a graph using an adjacency list representation.
+/// A graph using an adjacency list representation.
 ///
 /// Each vertex is identified by a value of type V. The graph is stored as an
 /// adjacency list, where each vertex is associated with two lists: one for
