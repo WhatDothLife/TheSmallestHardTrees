@@ -160,7 +160,7 @@ impl Polymorphisms {
     ///
     /// ```
     /// use tripolys::graph::AdjList;
-    /// use tripolys::graph::classes::triad;
+    /// use tripolys::graph::generators::triad;
     /// use tripolys::algebra::Polymorphisms;
     ///
     /// let kmm = "p(xyy)=q(yxx)=q(xxy), p(xyx)=q(xyx)";
@@ -292,7 +292,7 @@ impl Polymorphisms {
     ///
     /// ```
     /// use tripolys::graph::AdjList;
-    /// use tripolys::graph::classes::triad;
+    /// use tripolys::graph::generators::triad;
     /// use tripolys::algebra::Polymorphisms;
     ///
     /// let triad: AdjList<_> = triad("01001111,101000,011000").unwrap();
@@ -313,7 +313,7 @@ impl Polymorphisms {
     ///
     /// ```
     /// use tripolys::graph::AdjList;
-    /// use tripolys::graph::classes::triad;
+    /// use tripolys::graph::generators::triad;
     /// use tripolys::algebra::Polymorphisms;
     /// use tripolys::csp::Problem;
     ///
@@ -397,7 +397,7 @@ impl Polymorphisms {
     ///
     /// ```
     /// use tripolys::graph::AdjList;
-    /// use tripolys::graph::classes::triad;
+    /// use tripolys::graph::generators::triad;
     /// use tripolys::algebra::Polymorphisms;
     ///
     /// let triad: AdjList<_> = triad("01001111,1010000,011000").unwrap();
@@ -443,7 +443,7 @@ impl Polymorphisms {
     ///
     /// ```
     /// use tripolys::graph::AdjList;
-    /// use tripolys::graph::classes::triad;
+    /// use tripolys::graph::generators::triad;
     /// use tripolys::algebra::Polymorphisms;
     ///
     /// let triad: AdjList<_> = triad("01001111,1010000,011000").unwrap();
@@ -652,7 +652,7 @@ fn totally_symmetric_helper(sum: u32, n: u32) -> Vec<Vec<u32>> {
 mod tests {
     use super::*;
     use crate::algebra::Polymorphisms;
-    use crate::graph::classes::triad;
+    use crate::graph::generators::triad;
 
     #[test]
     fn test_np_hard() {

@@ -9,9 +9,9 @@ use std::error::Error;
 use clap::{App, AppSettings};
 use colored::*;
 use tripolys::csp::Stats;
-use tripolys::graph::classes::*;
+use tripolys::graph::generators::*;
+use tripolys::graph::parse_edge_list;
 use tripolys::graph::traits::Build;
-use tripolys::graph::utils::parse_edge_list;
 
 mod dot;
 mod endomorphism;

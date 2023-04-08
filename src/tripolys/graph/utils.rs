@@ -11,16 +11,16 @@ where
     G: Build,
     G::Vertex: FromStr,
 {
-    let edge_list = edge_list.trim_start_matches('[').trim_end_matches(']');
-
     let vertices = edge_list
+        .trim_start_matches('[')
+        .trim_end_matches(']')
         .split(&[',', '(', ')'])
         .filter(|&x| !x.is_empty())
         .map(|v| {
             v.parse::<G::Vertex>()
                 .map_err(|_| format!("Invalid character: {}", v))
         })
-        .collect::<Result<Vec<G::Vertex>, String>>()?;
+        .collect::<Result<Vec<_>, String>>()?;
 
     // Ensure that the number of vertices is even, i.e., the edge list is well-formed.
     if vertices.len() % 2 != 0 {

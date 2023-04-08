@@ -1,5 +1,5 @@
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
-use tripolys::graph::utils::edge_list;
+use tripolys::graph::edge_list;
 use tripolys::tree::*;
 
 use std::fs::{create_dir_all, File};

@@ -1,5 +1,5 @@
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
-use tripolys::graph::{formats::to_dot, AdjList};
+use tripolys::graph::{AdjList, to_dot};
 
 use crate::{parse_graph, CmdResult};
 

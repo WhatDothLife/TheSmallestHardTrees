@@ -6,8 +6,8 @@ use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 use tripolys::algebra::Polymorphisms;
 use tripolys::csp::Stats;
-use tripolys::graph::utils::{edge_list, parse_edge_list};
 use tripolys::graph::AdjList;
+use tripolys::graph::{edge_list, parse_edge_list};
 
 use crate::{parse_graph, print_stats, CmdResult};
 

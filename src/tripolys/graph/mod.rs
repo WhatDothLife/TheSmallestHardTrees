@@ -1,9 +1,12 @@
 //! Data-structures and abstractions for working with digraphs.
 
 mod adjlist;
-pub mod classes;
-pub mod formats;
+mod formats;
+pub mod generators;
 pub mod traits;
-pub mod utils;
+mod utils;
 
 pub use adjlist::AdjList;
+
+pub use formats::*;
+pub use utils::*;

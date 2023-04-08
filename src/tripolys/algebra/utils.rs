@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::csp::Problem;
 use crate::graph::AdjList;
-use crate::graph::classes::directed_path;
+use crate::graph::generators::directed_path;
 use crate::graph::traits::{Digraph, Edges, HasEdge};
 
 use super::iteralgebra::IterAlgebra;
