@@ -65,7 +65,7 @@ where
     g
 }
 
-/// Returns the complete digraph on `n` vertices.
+/// Tries to parse a triad graph from the given `str`, e.g. `1000,11,0`.
 pub fn triad<G>(s: &str) -> Result<G, String>
 where
     G: Build<Vertex = usize>,
