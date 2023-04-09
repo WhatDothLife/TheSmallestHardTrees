@@ -771,7 +771,7 @@ mod tests {
         let arity = "p(xyy)=q(yxx)=q(xxy), p(xyx)=q(xyxx)";
         let constant = "p(xyy)=q(yxx)=q(xxy), p(xyx)=q(xyx)=z";
         let empty = "";
-        let arsch = "   ";
+        let whitespace = "   ";
         let malformed1 = "p(xyy)";
         let malformed2 = "x";
 
@@ -787,7 +787,7 @@ mod tests {
         );
         assert_eq!(Polymorphisms::parse(empty), Err(ParseError::Empty));
         assert_eq!(
-            Polymorphisms::parse(arsch),
+            Polymorphisms::parse(whitespace),
             Err(ParseError::MalformedIdentity)
         );
         assert_eq!(
