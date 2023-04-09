@@ -280,6 +280,14 @@ impl Polymorphisms {
         ids
     }
 
+    pub fn non_height1(&self) -> &[(Term<char>, char)] {
+        &self.non_height1
+    }
+
+    pub fn height1(&self) -> &[(Term<char>, Term<char>)] {
+        &self.height1
+    }
+
     /// f(a<sub>1</sub>,…,a<sub>n</sub>) ∈ {a<sub>1</sub>,…,a<sub>n</sub>} for all a<sub>i</sub> ∈ D
     pub fn conservative(mut self, flag: bool) -> Self {
         self.conservative = flag;

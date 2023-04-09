@@ -89,10 +89,9 @@ where
 #[rustfmt::skip]
 fn print_stats(stats: Stats) {
     println!("Statistics:");
-    println!("- {: <20} {:.1?}", "AC3 time:", stats.ac3_time);
-    println!("- {: <20} {:.1?}", "MAC3 time:", stats.mac3_time);
-    println!("- {: <20} {:.1?}", "Total time:", stats.mac3_time + stats.ac3_time);
     println!("- {: <20} {:?}", "#backtracks:", stats.backtracks);
     println!("- {: <20} {:?}", "#assignments:", stats.assignments);
     println!("- {: <20} {:?}", "#consistency checks:", stats.ccks);
+    println!("- {: <20} {:.1?}", "ac3 time:", stats.ac3_time);
+    println!("- {: <20} {:.1?}", "mac3 time:", stats.mac3_time);
 }

@@ -1,11 +1,13 @@
 use clap::{App, AppSettings, Arg, ArgGroup, ArgMatches, SubCommand};
 use colored::*;
 use csv::WriterBuilder;
+use itertools::Itertools;
 use rayon::prelude::*;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 use tripolys::algebra::Polymorphisms;
-use tripolys::csp::Stats;
+use tripolys::csp::{Problem, Stats};
+use tripolys::graph::traits::{Vertices, Edges};
 use tripolys::graph::AdjList;
 use tripolys::graph::{edge_list, parse_edge_list};
 
@@ -128,7 +130,30 @@ pub fn command(args: &ArgMatches) -> CmdResult {
 
     if let Some(graph) = args.value_of("graph") {
         let h: AdjList<usize> = parse_graph(graph)?;
-        let mut problem = polymorphism.problem(&h);
+        let t_start = std::time::Instant::now();
+        let h_ind = polymorphism.indicator_graph(&h);
+        let t_end = t_start.elapsed();
+        let mut problem = Problem::new(&h_ind, &h);
+
+        for v in h_ind.vertices() {
+            for (term, constant) in polymorphism.non_height1() {
+                if let Some(bindings) = term.match_with(&v) {
+                    problem.set_value(v.clone(), *bindings.get(constant).unwrap());
+                }
+            }
+        }
+        if idempotent {
+            for v in h_ind.vertices() {
+                if v.args().iter().all_equal() {
+                    problem.precolor(v.clone(), v.args()[0]);
+                }
+            }
+        }
+        if conservative {
+            for v in h_ind.vertices() {
+                problem.set_list(v.clone(), v.args().to_owned());
+            }
+        }
 
         println!("\n> Checking for polymorphisms...");
 
@@ -140,6 +165,9 @@ pub fn command(args: &ArgMatches) -> CmdResult {
 
         if !no_stats {
             print_stats(problem.stats());
+            println!("- {: <20} {:.1?}", "indicator time:", t_end);
+            println!("- {: <20} {:?}", "#indicator vertices:", h_ind.vertex_count());
+            println!("- {: <20} {:?}", "#indicator edges:", h_ind.edge_count());
         }
 
         return Ok(());
