@@ -331,8 +331,7 @@ impl Polymorphisms {
     pub fn indicator_graph<V: Copy + Eq + Hash>(&self, h: &AdjList<V>) -> AdjList<Term<V>> {
         // Construct for each function symbol the categorical power of H of
         // the corresponding arity, and take their disjoint union.
-
-        let mut ind_edges: Vec<_> = self
+        let mut indicator_edges: Vec<_> = self
             .ops
             .iter()
             .flat_map(|(symbol, arity)| {
@@ -343,43 +342,41 @@ impl Polymorphisms {
             .collect();
 
         if self.level_wise {
-            // For every function symbol of arity k we construct only the
-            // subgraph of H^k consisting of all same-level k-tuples
-            // (i.e., tuples in which all vertices are from the same level).
             if let Some(lvls) = levels(h) {
-                ind_edges
+                // For every function symbol of arity k we construct only the
+                // subgraph of H^k consisting of all same-level k-tuples
+                // (i.e., tuples in which all vertices are from the same level).
+                indicator_edges
                     .retain(|(u, _)| u.args().iter().map(|v| lvls.get(v).unwrap()).all_equal());
             }
         }
-        let mut ind_graph = AdjList::from_edges(ind_edges);
+        let mut indicator_graph = AdjList::from_edges(indicator_edges);
+        // Identify vertices as dictated by the h1-identities
+        let mut unprocessed_vertices: IndexSet<_> = indicator_graph.vertices().collect();
+        let mut identified_vertices = Vec::new();
 
-        // Identify vertices that need to be inditified as dictated by the
-        // h1-identities
-        let mut unprocessed: IndexSet<_> = ind_graph.vertices().collect();
-        let mut contracted = Vec::new();
+        while let Some(u) = unprocessed_vertices.pop() {
+            identified_vertices.push(u.clone());
 
-        while let Some(u) = unprocessed.pop() {
-            contracted.push(u.clone());
-
-            while let Some(v) = contracted.pop() {
+            while let Some(v) = identified_vertices.pop() {
                 for (lhs, rhs) in self.height1.iter().flat_map(|(a, b)| [(a, b), (b, a)]) {
-                    if let Some(binding) = lhs.match_with(&v) {
+                    if let Some(var_binding) = lhs.match_with(&v) {
                         let unbound_vars: Vec<_> = rhs
                             .args()
                             .iter()
                             .copied()
-                            .filter(|v| binding.get(v).is_none())
+                            .filter(|v| var_binding.get(v).is_none())
                             .unique()
                             .collect();
 
                         for values in h.vertices().kproduct(unbound_vars.len()) {
-                            let mut binding = binding.clone();
-                            binding.extend(zip(unbound_vars.clone(), values));
-                            let mapped = rhs.map(|x| *binding.get(&x).unwrap());
+                            let mut substitution = var_binding.clone();
+                            substitution.extend(zip(unbound_vars.clone(), values));
+                            let rhs_mapped = rhs.map(|x| *substitution.get(&x).unwrap());
 
-                            if unprocessed.remove(&mapped) {
-                                ind_graph.contract_vertex(&u, &mapped);
-                                contracted.push(mapped);
+                            if unprocessed_vertices.remove(&rhs_mapped) {
+                                indicator_graph.contract_vertex(&u, &rhs_mapped);
+                                identified_vertices.push(rhs_mapped);
                             }
                         }
                     }
@@ -387,7 +384,7 @@ impl Polymorphisms {
             }
         }
 
-        ind_graph
+        indicator_graph
     }
 
     /// Obtains an instance of the graph homomorphism problem from the indicator
