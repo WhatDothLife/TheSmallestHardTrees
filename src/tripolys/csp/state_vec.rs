@@ -40,8 +40,8 @@ impl<T> StateVec<T> {
         self.vlen == 0
     }
 
-    /// Assigns a single value to the vector, effectively clearing the vector
-    /// and setting its virtual length to 1.
+    /// Assigns a single value at index `index`to the vector by swapping it with
+    /// index 0 and setting the virtual length to 1.
     pub fn set(&mut self, index: usize) {
         self.vlen = 1;
         self.data.swap(index, 0);
