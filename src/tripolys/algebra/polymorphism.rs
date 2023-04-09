@@ -427,7 +427,7 @@ impl Polymorphisms {
         for v in indicator.vertices() {
             for (term, constant) in &non_height1 {
                 if let Some(bindings) = term.match_with(&v) {
-                    problem.precolor(v.clone(), *bindings.get(constant).unwrap());
+                    problem.set_value(v.clone(), *bindings.get(constant).unwrap());
                 }
             }
         }

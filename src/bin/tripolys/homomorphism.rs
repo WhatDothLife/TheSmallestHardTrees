@@ -58,7 +58,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
         let precoloring = parse_precoloring(p)?;
 
         for (v, d) in precoloring {
-            problem.precolor(v, d);
+            problem.set_value(v, d);
         }
     }
 

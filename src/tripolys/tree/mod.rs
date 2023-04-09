@@ -65,7 +65,7 @@ where
     T: Digraph,
 {
     let mut problem = Problem::new(tree, tree);
-    problem.precolor(root.clone(), root);
+    problem.set_value(root.clone(), root);
     problem.make_arc_consistent();
 
     problem.all_singleton()

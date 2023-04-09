@@ -63,7 +63,7 @@ where
         }
     }
 
-    pub fn precolor(&mut self, x: X, a: A) {
+    pub fn set_value(&mut self, x: X, a: A) {
         let var_index = self.variable_indices.get_index_of(&x).unwrap();
         let val_index = self.value_indices.get_index_of(&a).unwrap();
         self.domains[var_index] = StateVec::from_iter([val_index]);

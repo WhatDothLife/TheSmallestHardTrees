@@ -145,7 +145,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
         if idempotent {
             for v in h_ind.vertices() {
                 if v.args().iter().all_equal() {
-                    problem.precolor(v.clone(), v.args()[0]);
+                    problem.set_value(v.clone(), v.args()[0]);
                 }
             }
         }
