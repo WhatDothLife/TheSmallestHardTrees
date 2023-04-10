@@ -14,7 +14,8 @@ use std::hash::Hash;
 use std::iter::zip;
 use std::str::FromStr;
 
-/// Operations D<sup>3</sup> → D that must satisfy a system of linear identities.
+/// Homomorphisms from H<sup>k</sup> to H, for some k ≥ 1 that must satisfy a
+/// linear condition.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Polymorphisms {
     // Operation symbols and their arity
@@ -140,7 +141,7 @@ macro_rules! condition {
         #[doc = concat!($(concat!("- ", $eq, "\n")),+)]
         pub fn $name() -> Polymorphisms {
             let identities = concat!($($eq, ",",)+);
-            Polymorphisms::parse(identities).unwrap()
+            Polymorphisms::parse_identities(identities).unwrap()
         }
     };
 }
@@ -151,7 +152,7 @@ impl Polymorphisms {
     ///
     /// The input string should contain a list of linear identities separated by
     /// commas or newlines. The terms that are not constants are of the form
-    /// `f(v1...vn)`, where `v1`, `v2`, ..., `vn`, are variables. Note, that
+    /// `f(x1...xn)`, where `x1`, `x2`, ..., `xn`, are variables. Note, that
     /// they're not separated by commas because of brevity. Variables can be any
     /// non-empty sequence of characters that does not contain the `(`, `)`,
     /// `=`, or `,` characters.
@@ -159,18 +160,12 @@ impl Polymorphisms {
     /// # Example
     ///
     /// ```
-    /// use tripolys::graph::AdjList;
-    /// use tripolys::graph::generators::triad;
     /// use tripolys::algebra::Polymorphisms;
     ///
     /// let kmm = "p(xyy)=q(yxx)=q(xxy), p(xyx)=q(xyx)";
-    ///
-    /// let triad: AdjList<_> = triad("0,0,0").unwrap();
-    /// let exists = Polymorphisms::parse(kmm).unwrap().exist(&triad);
-    ///
-    /// assert!(exists);
+    /// let polymorphisms = Polymorphisms::parse_identities(kmm).unwrap();
     /// ```
-    pub fn parse(identities: &str) -> Result<Self, ParseError> {
+    pub fn parse_identities(identities: &str) -> Result<Self, ParseError> {
         parse(identities)
     }
 
@@ -207,24 +202,24 @@ impl Polymorphisms {
 
     /// f (y,x,x,…,x,x) = f (x,y,x,…,x,x) = … = f (x,x,x,…,x,y)
     pub fn wnu(k: u32) -> Polymorphisms {
-        Polymorphisms::parse(&weak_near_unamity(k)).unwrap()
+        Polymorphisms::parse_identities(&weak_near_unamity(k)).unwrap()
     }
 
     /// f (y,x,x,…,x,x) = f (x,y,x,…,x,x) = … = f (x,x,x,…,x,y) = x
     pub fn nu(k: u32) -> Polymorphisms {
-        Polymorphisms::parse(&near_unamity(k)).unwrap()
+        Polymorphisms::parse_identities(&near_unamity(k)).unwrap()
     }
 
     /// f(x1,x2,…,xk) = f(x2,…,xk,x1)
     pub fn sigma(k: u32) -> Polymorphisms {
-        Polymorphisms::parse(&sigma(k)).unwrap()
+        Polymorphisms::parse_identities(&sigma(k)).unwrap()
     }
 
     /// - p<sub>1</sub>(x,y,y) = x
     /// - p<sub>i</sub>(x,x,y) = p<sub>i+1</sub>(x,y,y) for all i ∈ {1,…,n−1}
     /// - p<sub>n</sub>(x,x,y) = y.
     pub fn hagemann_mitschke(n: u32) -> Polymorphisms {
-        Polymorphisms::parse(&hagemann_mitschke_chain(n)).unwrap()
+        Polymorphisms::parse_identities(&hagemann_mitschke_chain(n)).unwrap()
     }
 
     /// - d<sub>0</sub> (x,y,z) ≈ x
@@ -233,7 +228,7 @@ impl Polymorphisms {
     /// - d<sub>i</sub> (x,x,y) ≈ d<sub>i+1</sub>(x,x,y)     for odd i ∈ {1,…, n − 1}
     /// - d<sub>n</sub> (x,y,z) ≈ z
     pub fn kearnes_kiss(n: u32) -> Polymorphisms {
-        Polymorphisms::parse(&kearnes_kiss_chain(n)).unwrap()
+        Polymorphisms::parse_identities(&kearnes_kiss_chain(n)).unwrap()
     }
 
     /// - f<sub>0</sub>(x,y,y,z) ≈ x
@@ -241,7 +236,7 @@ impl Polymorphisms {
     /// - f<sub>i</sub>(x,x,y,y) ≈ f<sub>i+1</sub> (x,y,y,y) for all i ∈ {0,…,n−1}
     /// - f<sub>n</sub>(x,x,y,z) ≈ z.
     pub fn no_name(n: u32) -> Polymorphisms {
-        Polymorphisms::parse(&no_name_chain(n)).unwrap()
+        Polymorphisms::parse_identities(&no_name_chain(n)).unwrap()
     }
 
     /// - d<sub>0</sub>(x,y,z) = x
@@ -255,7 +250,7 @@ impl Polymorphisms {
     /// - e<sub>i</sub>(x,y,x) = e<sub>i+1</sub>(x,y,x)   for even i < n
     /// - e<sub>n</sub>(x,y,z) = z.
     pub fn hobby_mckenzie(n: u32) -> Polymorphisms {
-        Polymorphisms::parse(&hobby_mckenzie(n)).unwrap()
+        Polymorphisms::parse_identities(&hobby_mckenzie(n)).unwrap()
     }
 
     /// - j<sub>1</sub>(x,x,y)    = x
@@ -264,13 +259,13 @@ impl Polymorphisms {
     /// - j<sub>2i</sub>(x,x,y)   = j<sub>2i+1</sub>(x,x,y)   for all i ∈ {1,…,n}
     /// - j<sub>2n+1</sub>(x,y,y) = y.
     pub fn jonsson(n: u32) -> Polymorphisms {
-        Polymorphisms::parse(&jonsson_chain(n)).unwrap()
+        Polymorphisms::parse_identities(&jonsson_chain(n)).unwrap()
     }
 
     /// f(x<sub>1</sub>,x<sub>2</sub>,…,x<sub>n</sub>) = f(y<sub>1</sub>,y<sub>2</sub>,…,y<sub>n</sub>)
     /// where {y<sub>1</sub>,y<sub>2</sub>,…,y<sub>n</sub>} = {x<sub>1</sub>,x<sub>2</sub>,…,x<sub>n</sub>}
     pub fn totally_symmetric(k: u32) -> Polymorphisms {
-        let mut ids = Polymorphisms::parse(&totally_symmetric(k)).unwrap();
+        let mut ids = Polymorphisms::parse_identities(&totally_symmetric(k)).unwrap();
         // NOTE: So far there is no characterization of linear identities that
         // can be satisfied level-wise. While parsing we only check for the case
         // where a h1-condition in two variables has both these variables appear
@@ -288,7 +283,20 @@ impl Polymorphisms {
         &self.height1
     }
 
+    pub fn level_wise(mut self, flag: bool) -> Self {
+        self.level_wise = flag;
+        self
+    }
+
     /// f(a<sub>1</sub>,…,a<sub>n</sub>) ∈ {a<sub>1</sub>,…,a<sub>n</sub>} for all a<sub>i</sub> ∈ D
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tripolys::algebra::Polymorphisms;
+    ///
+    /// let nu3 = Polymorphisms::nu(3).conservative(true)
+    /// ```
     pub fn conservative(mut self, flag: bool) -> Self {
         self.conservative = flag;
         self
@@ -299,23 +307,16 @@ impl Polymorphisms {
     /// # Examples
     ///
     /// ```
-    /// use tripolys::graph::AdjList;
-    /// use tripolys::graph::generators::triad;
     /// use tripolys::algebra::Polymorphisms;
     ///
-    /// let triad: AdjList<_> = triad("01001111,101000,011000").unwrap();
-    /// let exists = Polymorphisms::wnu(3)
-    ///     .idempotent(true)
-    ///     .exist(&triad);
-    ///
-    /// assert!(!exists);
+    /// let majority = Polymorphisms::nu(3).idempotent(true)
     /// ```
     pub fn idempotent(mut self, flag: bool) -> Self {
         self.idempotent = flag;
         self
     }
 
-    /// Computes the indicator graph H<sup>Ind</sup> of `graph`.
+    /// Computes the indicator graph of `h`.
     ///
     /// # Examples
     ///
@@ -458,6 +459,10 @@ impl Polymorphisms {
     /// ```
     pub fn exist<V: Copy + Eq + Hash>(&self, h: &AdjList<V>) -> bool {
         self.problem(h).solution_exists()
+    }
+
+    pub fn find<V: Copy + Eq + Hash>(&self, h: &AdjList<V>) -> Option<HashMap<Term<V>, V>> {
+        self.problem(h).solve_first()
     }
 
     pub fn find_all<V: Copy + Eq + Hash>(&self, h: &AdjList<V>) -> Vec<HashMap<Term<V>, V>> {
@@ -669,27 +674,27 @@ mod tests {
         let malformed1 = "p(xyy)";
         let malformed2 = "x";
 
-        assert!(Polymorphisms::parse(error).is_err());
-        assert!(Polymorphisms::parse(input).is_ok());
+        assert!(Polymorphisms::parse_identities(error).is_err());
+        assert!(Polymorphisms::parse_identities(input).is_ok());
         assert_eq!(
-            Polymorphisms::parse(arity),
+            Polymorphisms::parse_identities(arity),
             Err(ParseError::AmbiguousArity("q".into()))
         );
         assert_eq!(
-            Polymorphisms::parse(constant),
+            Polymorphisms::parse_identities(constant),
             Err(ParseError::UnboundConstant('z'))
         );
-        assert_eq!(Polymorphisms::parse(empty), Err(ParseError::Empty));
+        assert_eq!(Polymorphisms::parse_identities(empty), Err(ParseError::Empty));
         assert_eq!(
-            Polymorphisms::parse(whitespace),
+            Polymorphisms::parse_identities(whitespace),
             Err(ParseError::MalformedIdentity)
         );
         assert_eq!(
-            Polymorphisms::parse(malformed1),
+            Polymorphisms::parse_identities(malformed1),
             Err(ParseError::MalformedIdentity)
         );
         assert_eq!(
-            Polymorphisms::parse(malformed2),
+            Polymorphisms::parse_identities(malformed2),
             Err(ParseError::MalformedIdentity)
         );
     }
