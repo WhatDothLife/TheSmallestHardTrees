@@ -8,3 +8,6 @@ mod utils;
 pub use polymorphism::*;
 pub use term::*;
 pub use utils::*;
+
+#[cfg(test)]
+mod test;
