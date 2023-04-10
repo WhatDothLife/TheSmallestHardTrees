@@ -5,7 +5,7 @@ use std::hash::Hash;
 use std::iter::zip;
 use std::str::FromStr;
 
-/// Represents a term of the form f(x,y,..,z).
+/// Represents a term of the form f(x<sub>1</sub>,x<sub>2</sub>,..,x<sub>k</sub>).
 #[derive(Clone, Hash, Eq, PartialEq)]
 pub struct Term<T> {
     symbol: String,
