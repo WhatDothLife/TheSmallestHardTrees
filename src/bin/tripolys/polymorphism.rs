@@ -7,7 +7,7 @@ use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 use tripolys::algebra::Polymorphisms;
 use tripolys::csp::{Problem, Stats};
-use tripolys::graph::traits::{Vertices, Edges};
+use tripolys::graph::traits::{Edges, Vertices};
 use tripolys::graph::AdjList;
 use tripolys::graph::{edge_list, parse_edge_list};
 
@@ -166,7 +166,11 @@ pub fn command(args: &ArgMatches) -> CmdResult {
         if !no_stats {
             print_stats(problem.stats());
             println!("- {: <20} {:.1?}", "indicator time:", t_end);
-            println!("- {: <20} {:?}", "#indicator vertices:", h_ind.vertex_count());
+            println!(
+                "- {: <20} {:?}",
+                "#indicator vertices:",
+                h_ind.vertex_count()
+            );
             println!("- {: <20} {:?}", "#indicator edges:", h_ind.edge_count());
         }
 
