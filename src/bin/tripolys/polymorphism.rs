@@ -248,7 +248,7 @@ impl Serialize for Record {
         let mut state = serializer.serialize_struct("Record", 3)?;
 
         state.serialize_field("graph", &self.graph)?;
-        state.serialize_field("found", &self.found)?;
+        state.serialize_field("found", if self.found { "admit" } else { "deny" })?;
 
         if let Some(stats) = self.stats {
             state.serialize_field("backtracks", &stats.backtracks)?;
