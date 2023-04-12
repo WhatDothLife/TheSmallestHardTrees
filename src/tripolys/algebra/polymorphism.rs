@@ -684,7 +684,10 @@ mod tests {
             Polymorphisms::parse_identities(constant),
             Err(ParseError::UnboundConstant('z'))
         );
-        assert_eq!(Polymorphisms::parse_identities(empty), Err(ParseError::Empty));
+        assert_eq!(
+            Polymorphisms::parse_identities(empty),
+            Err(ParseError::Empty)
+        );
         assert_eq!(
             Polymorphisms::parse_identities(whitespace),
             Err(ParseError::MalformedIdentity)
