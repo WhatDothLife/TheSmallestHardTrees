@@ -5,6 +5,6 @@
 //! orientations of trees, and core orientations of trees.
 
 pub mod algebra;
-pub mod graph;
 pub mod csp;
+pub mod graph;
 pub mod tree;
