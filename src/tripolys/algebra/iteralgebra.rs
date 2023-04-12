@@ -1,4 +1,7 @@
 use itertools::{Itertools, MultiProduct};
+use std::hash::Hash;
+
+use crate::graph::traits::{Digraph, Edges, VertexType};
 
 impl<I> IterAlgebra for I where I: Iterator {}
 
@@ -56,6 +59,38 @@ where
         }
     }
 }
+
+impl<A, I> VertexType for KProductTuples<A, A, I>
+where
+    I: Iterator<Item = (A, A)> + Clone,
+    A: Clone + Eq + Hash,
+{
+    type Vertex = Vec<A>;
+}
+
+impl<A, I> Edges for KProductTuples<A, A, I>
+where
+    I: Iterator<Item = (A, A)> + Clone,
+    A: Clone + Eq + Hash,
+{
+    type EdgeIter<'a>
+     = Self where Self: 'a;
+
+    fn edges(&self) -> Self::EdgeIter<'_> {
+        self.clone()
+    }
+
+    fn edge_count(&self) -> usize {
+        todo!()
+    }
+}
+
+// impl<A, I> Digraph for KProductTuples<A, A, I>
+// where
+//     I: Iterator<Item = (A, A)> + Clone,
+//     A: Clone,
+// {
+// }
 
 #[derive(Clone)]
 pub struct KProductTuples<A, B, I>

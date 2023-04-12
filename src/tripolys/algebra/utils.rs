@@ -74,6 +74,7 @@ where
     is_homomorphism(f, h, h)
 }
 
+/// Checks whether the digraph `g` homomorphically maps to the digraph `h`.
 pub fn is_homomorphic<G, H>(g: &G, h: &H) -> bool
 where
     G: Digraph,
@@ -82,6 +83,7 @@ where
     Problem::new(g, h).solution_exists()
 }
 
+/// Checks whether two digraphs `g` and `h` are homomorphically equivalent.
 pub fn is_homomorphically_equivalent<G, H>(g: &G, h: &H) -> bool
 where
     G: Digraph,
@@ -90,15 +92,35 @@ where
     is_homomorphic(g, h) && is_homomorphic(h, g)
 }
 
-// pub fn is_polymorphism<H, F>(f: F, h: &H, k: usize) -> bool
-// where
-//     H: Edges + HasEdge,
-//     // H::EdgeIter: Clone,
-//     F: FnMut(Vec<H::Vertex>) -> H::Vertex,
-//     H::EdgeIter<'_>: Clone,
-// {
-//     is_homomorphism(f, h.edges().kproduct_tuples(k), h)
-// }
+/// Determines whether a given mapping function `f` is a polymorphism with arity
+/// `k` of graph `h`.
+///
+/// A polymorphism is a homomorphism from the categorial product of a graph to
+/// itself. In other words, the mapping function `f` maps the vertices of
+/// `h`<sup>k</sup> to the vertices of `h` while preserving edges.
+///
+/// # Examples
+///
+/// ```
+/// # use tripolys::graph::AdjList;
+/// # use tripolys::algebra::is_polymorphism;
+/// let h = AdjList::from_edges([(0, 1), (0, 2), (1, 3), (2, 3)]);
+///
+/// // Define the projection that maps to the first entry.
+/// let f = |vec: Vec<u8>| vec[0];
+///
+/// assert!(is_polymorphism(f, &h, 1));
+/// assert!(is_polymorphism(f, &h, 2));
+/// assert!(is_polymorphism(f, &h, 3));
+/// ```
+pub fn is_polymorphism<'a, H, F>(f: F, h: &'a H, k: usize) -> bool
+where
+    H: Edges + HasEdge + 'a,
+    F: FnMut(Vec<H::Vertex>) -> H::Vertex,
+    H::EdgeIter<'a>: Clone,
+{
+    is_homomorphism(f, &h.edges().kproduct_tuples(k), h)
+}
 
 /// Returns `true` if the input graph `g` is balanced, `false` otherwise.
 ///
