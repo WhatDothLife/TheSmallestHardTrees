@@ -200,24 +200,24 @@ impl Polymorphisms {
         "q(yxy)=q(xxy)=q(yyy)"
     );
 
-    /// f (y,x,x,…,x,x) = f (x,y,x,…,x,x) = … = f (x,x,x,…,x,y)
+    /// f (y,x,x,…,x,x) ≈ f (x,y,x,…,x,x) ≈ … ≈ f (x,x,x,…,x,y)
     pub fn wnu(k: u32) -> Polymorphisms {
         Polymorphisms::parse_identities(&weak_near_unamity(k)).unwrap()
     }
 
-    /// f (y,x,x,…,x,x) = f (x,y,x,…,x,x) = … = f (x,x,x,…,x,y) = x
+    /// f (y,x,x,…,x,x) ≈ f (x,y,x,…,x,x) ≈ … ≈ f (x,x,x,…,x,y) ≈ x
     pub fn nu(k: u32) -> Polymorphisms {
         Polymorphisms::parse_identities(&near_unamity(k)).unwrap()
     }
 
-    /// f(x1,x2,…,xk) = f(x2,…,xk,x1)
+    /// f(x1,x2,…,xk) ≈ f(x2,…,xk,x1)
     pub fn sigma(k: u32) -> Polymorphisms {
         Polymorphisms::parse_identities(&sigma(k)).unwrap()
     }
 
-    /// - p<sub>1</sub>(x,y,y) = x
-    /// - p<sub>i</sub>(x,x,y) = p<sub>i+1</sub>(x,y,y) for all i ∈ {1,…,n−1}
-    /// - p<sub>n</sub>(x,x,y) = y.
+    /// - p<sub>1</sub>(x,y,y) ≈ x
+    /// - p<sub>i</sub>(x,x,y) ≈ p<sub>i+1</sub>(x,y,y) for all i ∈ {1,…,n−1}
+    /// - p<sub>n</sub>(x,x,y) ≈ y.
     pub fn hagemann_mitschke(n: u32) -> Polymorphisms {
         Polymorphisms::parse_identities(&hagemann_mitschke_chain(n)).unwrap()
     }
@@ -239,30 +239,30 @@ impl Polymorphisms {
         Polymorphisms::parse_identities(&no_name_chain(n)).unwrap()
     }
 
-    /// - d<sub>0</sub>(x,y,z) = x
-    /// - d<sub>i</sub>(x,y,y) = d<sub>i+1</sub>(x,y,y)   for even i < n
-    /// - d<sub>i</sub>(x,x,y) = d<sub>i+1</sub>(x,x,y)   for odd i < n
-    /// - d<sub>i</sub>(x,y,x) = d<sub>i+1</sub>(x,y,x)   for odd i < n
-    /// - d<sub>n</sub>(x,y,y) = p(x,y,y)
-    /// - p(x,x,y)             = e<sub>0</sub>(x,x,y)
-    /// - e<sub>i</sub>(x,y,y) = e<sub>i+1</sub>(x,y,y)   for even i < n
-    /// - e<sub>i</sub>(x,x,y) = e<sub>i+1</sub>(x,x,y)   for odd i < n
-    /// - e<sub>i</sub>(x,y,x) = e<sub>i+1</sub>(x,y,x)   for even i < n
-    /// - e<sub>n</sub>(x,y,z) = z.
+    /// - d<sub>0</sub>(x,y,z) ≈ x
+    /// - d<sub>i</sub>(x,y,y) ≈ d<sub>i+1</sub>(x,y,y)   for even i < n
+    /// - d<sub>i</sub>(x,x,y) ≈ d<sub>i+1</sub>(x,x,y)   for odd i < n
+    /// - d<sub>i</sub>(x,y,x) ≈ d<sub>i+1</sub>(x,y,x)   for odd i < n
+    /// - d<sub>n</sub>(x,y,y) ≈ p(x,y,y)
+    /// - p(x,x,y)             ≈ e<sub>0</sub>(x,x,y)
+    /// - e<sub>i</sub>(x,y,y) ≈ e<sub>i+1</sub>(x,y,y)   for even i < n
+    /// - e<sub>i</sub>(x,x,y) ≈ e<sub>i+1</sub>(x,x,y)   for odd i < n
+    /// - e<sub>i</sub>(x,y,x) ≈ e<sub>i+1</sub>(x,y,x)   for even i < n
+    /// - e<sub>n</sub>(x,y,z) ≈ z.
     pub fn hobby_mckenzie(n: u32) -> Polymorphisms {
         Polymorphisms::parse_identities(&hobby_mckenzie(n)).unwrap()
     }
 
-    /// - j<sub>1</sub>(x,x,y)    = x
-    /// - j<sub>2i−1</sub>(x,y,y) = j<sub>2i</sub>(x,y,y)     for all i ∈ {1,…,n}
-    /// - j<sub>i</sub>(x,y,x)    = x                         for all i ∈ {1,…,2n + 1}
-    /// - j<sub>2i</sub>(x,x,y)   = j<sub>2i+1</sub>(x,x,y)   for all i ∈ {1,…,n}
-    /// - j<sub>2n+1</sub>(x,y,y) = y.
+    /// - j<sub>1</sub>(x,x,y)    ≈ x
+    /// - j<sub>2i−1</sub>(x,y,y) ≈ j<sub>2i</sub>(x,y,y)     for all i ∈ {1,…,n}
+    /// - j<sub>i</sub>(x,y,x)    ≈ x                         for all i ∈ {1,…,2n + 1}
+    /// - j<sub>2i</sub>(x,x,y)   ≈ j<sub>2i+1</sub>(x,x,y)   for all i ∈ {1,…,n}
+    /// - j<sub>2n+1</sub>(x,y,y) ≈ y.
     pub fn jonsson(n: u32) -> Polymorphisms {
         Polymorphisms::parse_identities(&jonsson_chain(n)).unwrap()
     }
 
-    /// f(x<sub>1</sub>,x<sub>2</sub>,…,x<sub>n</sub>) = f(y<sub>1</sub>,y<sub>2</sub>,…,y<sub>n</sub>)
+    /// f(x<sub>1</sub>,x<sub>2</sub>,…,x<sub>n</sub>) ≈ f(y<sub>1</sub>,y<sub>2</sub>,…,y<sub>n</sub>)
     /// where {y<sub>1</sub>,y<sub>2</sub>,…,y<sub>n</sub>} = {x<sub>1</sub>,x<sub>2</sub>,…,x<sub>n</sub>}
     pub fn totally_symmetric(k: u32) -> Polymorphisms {
         let mut ids = Polymorphisms::parse_identities(&totally_symmetric(k)).unwrap();
