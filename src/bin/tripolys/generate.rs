@@ -1,4 +1,5 @@
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
+use csv::WriterBuilder;
 use tripolys::graph::edge_list;
 use tripolys::tree::*;
 
@@ -55,6 +56,15 @@ pub fn cli() -> App<'static, 'static> {
                 .default_value("./data")
                 .help("Path of the data directory"),
         )
+        .arg(
+            Arg::with_name("output")
+                .short("o")
+                .long("output")
+                .value_name("FILE")
+                .help("Name of the csv output file")
+                .default_value("./output.csv")
+                .takes_value(true),
+        )
 }
 
 pub fn command(args: &ArgMatches) -> CmdResult {
@@ -73,6 +83,17 @@ pub fn command(args: &ArgMatches) -> CmdResult {
 
     let config = Config { triad, core };
 
+    let mut wtr = args
+        .value_of("output")
+        .map(|path| {
+            let mut path = path.to_owned();
+            if !path.ends_with(".csv") {
+                path.push_str(".csv");
+            }
+            WriterBuilder::new().from_path(path)
+        })
+        .transpose()?;
+
     let mut rooted_trees = vec![];
 
     for n in start..=end {
@@ -80,6 +101,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
         println!("  > Generating trees...");
 
         let mut stats = Stats::default();
+        stats.vertices = n as u32;
         let trees = generate_trees(n, &mut rooted_trees, &config, &mut stats);
 
         if let Some(num_ac_calls) = stats.num_ac_calls {
@@ -90,6 +112,10 @@ pub fn command(args: &ArgMatches) -> CmdResult {
         }
         println!("    - {: <20} {:?}", "#trees:", stats.num_trees);
         println!("    - {: <20} {:.1?}", "t(total):", stats.time_total);
+
+        if let Some(wtr) = wtr.as_mut() {
+            wtr.serialize(stats)?;
+        }
 
         if !no_write {
             let dir = data_path.join(dir_name(n));

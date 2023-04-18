@@ -3,6 +3,7 @@ use std::{sync::Arc, time::Duration};
 use crate::tree::{is_core_tree, is_rooted_core_tree, Tree};
 use itertools::Itertools;
 use rayon::prelude::*;
+use serde::{ser::SerializeStruct, Serialize};
 
 /// Returns every set of `k` integers that sum up to `n` sorted in ascending order.
 ///
@@ -52,6 +53,8 @@ pub struct Config {
 /// Statistics from the execution of the algorithm
 #[derive(Clone, Debug, Default)]
 pub struct Stats {
+    /// Number of vertices
+    pub vertices: u32,
     /// Number of generated (core) trees
     pub num_trees: u32,
     /// Number of AC calls
@@ -60,6 +63,34 @@ pub struct Stats {
     pub time_ac_call: Option<Duration>,
     /// Time to generate the trees
     pub time_total: Duration,
+}
+
+impl Serialize for Stats {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut state = serializer.serialize_struct("Stats", 5)?;
+
+        state.serialize_field("vertices", &self.vertices)?;
+        state.serialize_field("trees", &self.num_trees)?;
+        if let Some(num_ac_calls) = self.num_ac_calls {
+            state.serialize_field("ac calls", &num_ac_calls)?;
+        } else {
+            state.serialize_field("ac calls", "")?;
+        }
+        if let Some(time_ac_call) = self.time_ac_call {
+            state.serialize_field(
+                "time per ac call (μs)",
+                &format!("{}", time_ac_call.as_micros()),
+            )?;
+        } else {
+            state.serialize_field("time per ac call (μs)", "")?;
+        }
+        state.serialize_field("total time", &format!("{:.1?}", self.time_total))?;
+
+        state.end()
+    }
 }
 
 /// Returns all unique sets of `k` children whose number of nodes sum up to `n`.
