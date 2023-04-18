@@ -362,10 +362,9 @@ impl Polymorphisms {
         let mut indicator_graph = AdjList::from_edges(indicator_edges);
         // Identify vertices as dictated by the h1-identities
         let mut unprocessed_vertices: IndexSet<_> = indicator_graph.vertices().collect();
-        let mut identified_vertices = Vec::new();
 
         while let Some(u) = unprocessed_vertices.pop() {
-            identified_vertices.push(u.clone());
+            let mut identified_vertices = vec![u.clone()];
 
             while let Some(v) = identified_vertices.pop() {
                 for (lhs, rhs) in self.height1.iter().flat_map(|(a, b)| [(a, b), (b, a)]) {
