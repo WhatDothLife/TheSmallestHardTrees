@@ -94,7 +94,7 @@ tripolys polymorphism -i core_triads.edges -o core_triads_2-wnu_deny.csv -c 2-wn
 tripolys polymorphism -i core_triads_2-wnu_deny.csv -o core_triads_kmm_deny.csv -c kmm -f deny
 ```
 
-Or test each one with it's compact encoding:
+Or test each one with its compact encoding:
 
 ```
 tripolys polymorphism -g 10110000,0101111,100111 -c kmm
