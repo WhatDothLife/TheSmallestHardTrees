@@ -73,11 +73,11 @@ fn parse(s: &str) -> Result<Polymorphisms, ParseError> {
     let mut non_h1 = Vec::new();
     let mut h1: Vec<(Term<char>, Term<char>)> = Vec::new();
 
-    for eq_str in trimmed.split([',', '\n', ' ']).filter(|x| !x.is_empty()) {
+    for eq_str in trimmed.split(['\n', ';']).filter(|x| !x.is_empty()) {
         let mut constant = None;
         let mut terms = Vec::new();
 
-        for st in eq_str.split('=') {
+        for st in eq_str.split(['≈', '=']) {
             if let Ok(term) = Term::from_str(st) {
                 if let Some(k) = operations.get(term.symbol()) {
                     if *k != term.arity() {
@@ -140,7 +140,7 @@ macro_rules! condition {
     ($name:ident, $($eq:expr),+ $(,)?) => {
         #[doc = concat!($(concat!("- ", $eq, "\n")),+)]
         pub fn $name() -> Polymorphisms {
-            let identities = concat!($($eq, ",",)+);
+            let identities = concat!($($eq, ";",)+);
             Polymorphisms::parse_identities(identities).unwrap()
         }
     };
@@ -162,42 +162,52 @@ impl Polymorphisms {
     /// ```
     /// use tripolys::algebra::Polymorphisms;
     ///
-    /// let kmm = "p(xyy)=q(yxx)=q(xxy), p(xyx)=q(xyx)";
+    /// let kmm = "p(xyy)=q(yxx)=q(xxy); p(xyx)=q(xyx)";
     /// let polymorphisms = Polymorphisms::parse_identities(kmm).unwrap();
     /// ```
     pub fn parse_identities(identities: &str) -> Result<Self, ParseError> {
         parse(identities)
     }
 
-    condition!(siggers, "s(area)=s(rare)");
-    condition!(kmm, "p(xyy)=q(yxx)=q(xxy)", "p(xyx)=q(xyx)");
-    condition!(majority, "m(xxy)=m(xyx)=m(yxx)=m(xxx)=x");
-    condition!(minority, "m(yyy)=m(xxy)=m(xyx)=m(yxx)=y");
-    condition!(maltsev, "f(xxy)=f(yxx)=y");
-    condition!(fs3, "f(xyz)=f(zxy)=f(yxz)");
-    condition!(edge4, "f(yyxx)=f(yxyx)=f(xxxx)=f(xxxy)");
-    condition!(edge5, "f(yyxxx)=f(yxyxx)=f(xxxxx)=f(xxxyx)=f(xxxxy)");
-    condition!(symmetric_majority, "t(xyz)=t(yxz)=t(yzx)", "t(xxy)=t(xxx)");
-    condition!(g2, "f(aaxy)=f(bbxy)=f(xaay)=f(yaxa)");
-    condition!(g3, "f(aaxyz)=f(bbxyz)=f(xaayz)=f(yaxaz)=f(zaxya)");
-    condition!(gs3, "f(xxxx)=f(xxxy)", "f((123x)=f(231x)");
+    condition!(siggers, "s(a,r,e,a) ≈ s(r,a,r,e)");
+    condition!(kmm, "p(x,y,y) ≈ q(y,x,x) ≈ q(x,x,y)", "p(x,y,x) ≈ q(x,y,x)");
+    condition!(majority, "m(x,x,y) ≈ m(x,y,x) ≈ m(y,x,x) ≈ m(x,x,x) ≈ x");
+    condition!(minority, "m(y,y,y) ≈ m(x,x,y) ≈ m(x,y,x) ≈ m(y,x,x) ≈ y");
+    condition!(maltsev, "f(x,x,y) ≈ f(y,x,x) ≈ y");
+    condition!(fs3, "f(x,y,z) ≈ f(z,x,y) ≈ f(y,x,z)");
+    condition!(edge4, "f(y,y,x,x) ≈ f(y,x,y,x) ≈ f(x,x,x,x) ≈ f(x,x,x,y)");
+    condition!(
+        edge5,
+        "f(y,y,x,x,x) ≈ f(y,x,y,x,x) ≈ f(x,x,x,x,x) ≈ f(x,x,x,y,x) ≈ f(x,x,x,x,y)"
+    );
+    condition!(
+        symmetric_majority,
+        "t(x,y,z) ≈ t(y,x,z) ≈ t(y,z,x)",
+        "t(x,x,y) ≈ t(x,x,x)"
+    );
+    condition!(g2, "f(a,a,x,y) ≈ f(b,b,x,y) ≈ f(x,a,a,y) ≈ f(y,a,x,a)");
+    condition!(
+        g3,
+        "f(a,a,x,y,z) ≈ f(b,b,x,y,z) ≈ f(x,a,a,y,z) ≈ f(y,a,x,a,z) ≈ f(z,a,x,y,a)"
+    );
+    condition!(gs3, "f(x,x,x,x) ≈ f(x,x,x,y)", "f(1,2,3,x) ≈ f(2,3,1,x)");
     condition!(
         wnu3_4,
-        "g(xxy)=g(xyx)=g(yxx)",
-        "f(xxxy)=f(xxyx)=f(xyxx)=f(yxxx)",
-        "g(yxx)=f(yxxx)"
+        "g(x,x,y) ≈ g(x,y,x) ≈ g(y,x,x)",
+        "f(x,x,x,y) ≈ f(x,x,y,x) ≈ f(x,y,x,x) ≈ f(y,x,x,x)",
+        "g(y,x,x) ≈ f(y,x,x,x)"
     );
     condition!(
         hm2maj,
-        "p(yyx)=p(xxx)",
-        "p(xyy)=q(xxy)",
-        "q(xyy)=q(xxx)",
-        "p(xyx)=p(xxx)=q(xyx)"
+        "p(y,y,x) ≈ p(x,x,x)",
+        "p(x,y,y) ≈ q(x,x,y)",
+        "q(x,y,y) ≈ q(x,x,x)",
+        "p(x,y,x) ≈ p(x,x,x) ≈ q(x,y,x)"
     );
     condition!(
         pix2,
-        "p(xyy)=p(xxx)=p(xyx),p(xxy)=q(xyy)",
-        "q(yxy)=q(xxy)=q(yyy)"
+        "p(x,y,y) ≈ p(x,x,x) ≈ p(x,y,x),p(x,x,y) ≈ q(x,y,y)",
+        "q(y,x,y) ≈ q(x,x,y) ≈ q(y,y,y)"
     );
 
     /// f (y,x,x,…,x,x) ≈ f (x,y,x,…,x,x) ≈ … ≈ f (x,x,x,…,x,y)
@@ -295,7 +305,7 @@ impl Polymorphisms {
     /// ```
     /// use tripolys::algebra::Polymorphisms;
     ///
-    /// let nu3 = Polymorphisms::nu(3).conservative(true)
+    /// let nu3 = Polymorphisms::nu(3).conservative(true);
     /// ```
     pub fn conservative(mut self, flag: bool) -> Self {
         self.conservative = flag;
@@ -309,7 +319,7 @@ impl Polymorphisms {
     /// ```
     /// use tripolys::algebra::Polymorphisms;
     ///
-    /// let majority = Polymorphisms::nu(3).idempotent(true)
+    /// let majority = Polymorphisms::nu(3).idempotent(true);
     /// ```
     pub fn idempotent(mut self, flag: bool) -> Self {
         self.idempotent = flag;
@@ -664,10 +674,10 @@ mod tests {
 
     #[test]
     fn test_parse_identities() {
-        let input = "p(xyy)=q(yxx)=q(xxy), p(xyx)=q(xyx)";
-        let error = "p(xyy)=q(yxx)=q(xxy), p(xyx)q(xyx)";
-        let arity = "p(xyy)=q(yxx)=q(xxy), p(xyx)=q(xyxx)";
-        let constant = "p(xyy)=q(yxx)=q(xxy), p(xyx)=q(xyx)=z";
+        let input = "p(xyy)=q(yxx)=q(xxy); p(xyx)=q(xyx)";
+        let error = "p(xyy)=q(yxx)=q(xxy); p(xyx)q(xyx)";
+        let arity = "p(xyy)=q(yxx)=q(xxy); p(xyx)=q(xyxx)";
+        let constant = "p(xyy)=q(yxx)=q(xxy); p(xyx)=q(xyx)=z";
         let empty = "";
         let whitespace = "   ";
         let malformed1 = "p(xyy)";
