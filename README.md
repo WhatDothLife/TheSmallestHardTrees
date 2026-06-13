@@ -1,181 +1,188 @@
 Tripolys
 ====================================
 
-A program for checking homomorphisms and testing polymorphism conditions of
-directed graphs. Also implements an algorithm to generate orientations of trees,
-and core orientations of trees. 
+Companion code for the paper *The Smallest Hard Trees*. Provides two command-line
+tools for generating orientations of trees and testing polymorphism conditions of
+directed graphs.
 
-This repository contains companion code for the following paper. The results  be
-found in a separate data repository over
-[here](https://github.com/WhatDothLife/HardTreesData). The python code can be
-found [here](https://github.com/Zerwas/TheSmallestHardTreesPython).  If you use
-this code, please cite the paper. You can use the bibtex reference below. (TODO
-update once published)
+The experimental results can be found in a separate data repository
+[here](https://github.com/WhatDothLife/HardTreesData). The Python code can be
+found [here](https://github.com/Zerwas/TheSmallestHardTreesPython). If you use
+this code, please cite the paper:
 
-_M. Bodirsky, J. Bulín, F. Starke, and M. Wernthaler. The smallest hard trees, arXiv:2205.07528 [math.RA] (May 2022)_
-https://doi.org/10.48550/arXiv.2205.07528
- 
-```
-@misc{https://doi.org/10.1007/s10601-023-09341-8,
+_M. Bodirsky, J. Bulín, F. Starke, and M. Wernthaler. The Smallest Hard Trees.
+Constraints, Springer, 2023._
+https://doi.org/10.1007/s10601-023-09341-8
+
+```bibtex
+@article{https://doi.org/10.1007/s10601-023-09341-8,
   doi = {10.1007/s10601-023-09341-8},
   url = {https://link.springer.com/article/10.1007/s10601-023-09341-8},
-  author = {Bodirsky, Manuel and Bulín, Jakub and Starke, Florian and Wernthaler, Michael},  
-  keywords = {Rings and Algebras (math.RA), FOS: Mathematics, FOS: Mathematics, G.2.2, 08A70, 08B05},  
+  author = {Bodirsky, Manuel and Bulín, Jakub and Starke, Florian and Wernthaler, Michael},
   title = {The Smallest Hard Trees},
-  publisher = {springer},
+  publisher = {Springer},
   year = {2023},
   copyright = {Creative Commons Attribution Non Commercial Share Alike 4.0 International}
 }
 ```
 
-Introduction
------------------
-In the paper *The Smallest Hard Trees*, we study computational and descriptive
-complexity of fixed-template CSPs for small orientations of trees. The paper
-contains a number of experimental results (see Section 7). Below you can find
-the commands to reproduce those results. The commands assume that the data
-repository has been cloned to `data/`.
-
 Installation
 -----------------
-The Rust code is compatible with Rust 2021.
+Requires Rust 2021 edition or later.
 
 ```
-git clone https://gitlab.com/WhatDothLife/TheSmallestHardTrees.git
+git clone https://github.com/WhatDothLife/TheSmallestHardTrees.git
 cd TheSmallestHardTrees
 cargo build --release
 ```
-The executable can be found in `./target/release/tripolys`.
 
+The two executables can be found in `./target/release/`.
 
 Usage
 -----------------
 
-### Generate small trees and core trees
-In Section 4, we introduce algorithms to generate small trees and core trees.
-The numbers of such trees are given in Table 2 in Section 7.
+### `generate` — Generate orientations of trees
 
-- Generate all trees with number of vertices between `n` and `m`:
 ```
-tripolys generate -s n -e m
+generate --start <NUM> --end <NUM> [OPTIONS]
 ```
 
-- Generate all core trees with number of vertices between `n` and `m`:
-  
+Generate all orientations of trees with a given number of vertices. Results are
+written as edge lists to the data directory (default: `./data`), one file per
+vertex count.
+
+**Options:**
+- `-s`, `--start <NUM>` — start vertex count (required)
+- `-e`, `--end <NUM>` — end vertex count, inclusive (required)
+- `-c`, `--core` — only generate cores
+- `-t`, `--triad` — only generate triads
+- `-d`, `--data_path <PATH>` — data directory (default: `./data`)
+- `-o`, `--output <FILE>` — write statistics to a CSV file
+- `-n`, `--no-write` — do not write results to disk
+
+**Examples:**
+
+Generate all trees with 1 to 20 vertices:
 ```
-tripolys generate -s n -e m --core
+generate -s 1 -e 20
 ```
 
-You may need to modify the path to the data folder via the option `data_path`
-[default value: `./data`]. 
+Generate all core trees with 1 to 20 vertices:
+```
+generate -s 1 -e 20 --core
+```
 
-### The smallest NP-hard trees (Section 7.1.1) 
+Generate all core triads with 4 to 22 vertices:
+```
+generate -s 4 -e 22 --core --triad
+```
 
-The trees can be found
+---
+
+### `polymorphism` — Test polymorphism conditions
+
+```
+polymorphism --condition <NAME> [--graph <H> | --input <PATH> --output <PATH>] [OPTIONS]
+```
+
+Test whether a digraph admits polymorphisms satisfying a given condition.
+
+**Modes:**
+- `--graph <H>` — test a single graph, given as an inline edge list or a file containing one edge list
+- `--input <PATH> --output <PATH>` — test every graph in a file (one edge list per line) and write results to a CSV
+
+**Conditions** (pass name to `-c`):
+
+| Name | Condition |
+|------|-----------|
+| `majority` | Majority |
+| `k-nu` | k-ary near-unanimity |
+| `k-wnu` | k-ary weak near-unanimity |
+| `kmm` | Kearnes-Marković-McKenzie |
+| `n-j` | Jónsson chain of length n |
+| `n-kk` | Kearnes-Kiss chain of length n |
+| `n-homck` | Hobby-McKenzie chain of length n |
+| `n-hami` | Hagemann-Mitschke chain of length n |
+| `n-ts` | Totally symmetric of arity n |
+| `siggers` | Siggers |
+
+Custom identities can also be passed directly, separated by `,`:
+```
+polymorphism -c 'p(xyy)=q(yxx)=q(xxy),p(xyx)=q(xyx)' -g '[(0,1),(1,2),(2,0)]'
+```
+
+**Examples:**
+
+Test a single graph for a majority polymorphism:
+```
+polymorphism -c majority -g "[(0,1),(1,2),(2,0)]"
+```
+
+Test all core trees with 20 vertices for KMM polymorphisms, keep only those that deny:
+```
+polymorphism -c kmm -i data/20/core_trees.edges -o results.csv -f deny
+```
+
+---
+
+Reproducing the Results
+-----------------
+The commands below reproduce the experimental results from Section 7 of the paper.
+They assume that the data repository has been cloned to `data/`.
+
+### The smallest NP-hard trees (Section 7.1.1)
+
+The 36 NP-hard trees with 20 vertices are
 [here](https://github.com/WhatDothLife/HardTreesData/blob/master/20/core_trees_kmm_deny.csv).
-To reproduce the result, run the following sequence of commands:
 
 ```
-cd data/20
-tripolys polymorphism -i core_trees.edges -o core_trees_2-wnu_deny.csv -c 2-wnu -f deny
-tripolys polymorphism -i core_trees_2-wnu_deny.csv -o core_trees_kmm_deny.csv -c kmm -f deny
+polymorphism -c 2-wnu -i data/20/core_trees.edges -o data/20/core_trees_2-wnu_deny.csv -f deny
+polymorphism -c kmm   -i data/20/core_trees_2-wnu_deny.csv -o data/20/core_trees_kmm_deny.csv -f deny
 ```
 
-We also found the smallest NP-hard triads: 
-The triads can be found [here](https://github.com/WhatDothLife/HardTreesData/blob/master/22/core_triads_kmm_deny.csv).
+The 4 smallest NP-hard triads with 22 vertices are
+[here](https://github.com/WhatDothLife/HardTreesData/blob/master/22/core_triads_kmm_deny.csv).
 
 ```
-tripolys generate -s 4 -e 22 --core --triad
+polymorphism -c 2-wnu -i data/22/core_triads.edges -o data/22/core_triads_2-wnu_deny.csv -f deny
+polymorphism -c kmm   -i data/22/core_triads_2-wnu_deny.csv -o data/22/core_triads_kmm_deny.csv -f deny
 ```
-
-```
-cd data/22
-tripolys polymorphism -i core_triads.edges -o core_triads_2-wnu_deny.csv -c 2-wnu -f deny
-tripolys polymorphism -i core_triads_2-wnu_deny.csv -o core_triads_kmm_deny.csv -c kmm -f deny
-```
-
-Or test each one with its compact encoding:
-
-```
-tripolys polymorphism -g 10110000,0101111,100111 -c kmm
-tripolys polymorphism -g 10110000,1001111,010111 -c kmm
-```
-
 
 ### The smallest NL-hard trees (Section 7.1.2)
 
 ```
-cd data/12
-tripolys polymorphism -i core_trees.edges -o core_trees_8-hami_deny.csv -c 8-hami -f deny
+polymorphism -c 8-hami -i data/12/core_trees.edges -o data/12/core_trees_8-hami_deny.csv -f deny
 ```
-
-### The smallest tree not solved by Datalog (Section 7.1.3)
-
-TODO
 
 ### The smallest tree not solved by Arc Consistency (Section 7.1.4)
 
-The trees not solved by Arc Consistency are
-[here](https://github.com/WhatDothLife/HardTreesData/blob/master/19/core_trees_2-wnu_deny.csv)
-and this is how you can test them:
-
 ```
-cd data/19
-tripolys polymorphism -i core_trees.edges -o core_trees_2-wnu_deny.csv -c 2-wnu -f deny
+polymorphism -c 2-wnu -i data/19/core_trees.edges -o data/19/core_trees_2-wnu_deny.csv -f deny
 ```
 
-
-### A tree not known to be in NL (Section 7.2.1)
-
-The trees not known to be in NL are
-[here](https://github.com/WhatDothLife/HardTreesData/blob/master/16/core_trees_majority_deny.csv)
-and this is how you can test them:
+### Trees not known to be in NL (Section 7.2.1)
 
 ```
-cd data/16
-tripolys polymorphism -i core_trees.edges -o core_trees_majority_deny.csv -c majority -f deny
+polymorphism -c majority -i data/16/core_trees.edges -o data/16/core_trees_majority_deny.csv -f deny
 ```
 
+Test individual trees:
 ```
-tripolys polymorphism -g '[(0,1),(0,5),(1,2),(2,3),(3,4),(5,11),(6,5),(6,8),(7,6),(8,9),(9,10),(12,11),(12,14),(13,12),(14,15)]' -c 2-homck
-```
-
-```
-tripolys polymorphism -g '[(0,1),(0,5),(1,2),(2,3),(3,4),(5,11),(6,5),(6,8),(7,6),(8,9),(9,10),(12,11),(12,14),(13,12),(14,15)]' -c 5-kk
-```
-
-```
-tripolys polymorphism -g '[(0,1),(0,5),(1,2),(2,3),(3,4),(5,11),(6,5),(6,8),(7,6),(8,9),(9,10),(12,11),(12,14),(13,12),(14,15)]' -c 1000-j
+polymorphism -c 2-homck -g '[(0,1),(0,5),(1,2),(2,3),(3,4),(5,11),(6,5),(6,8),(7,6),(8,9),(9,10),(12,11),(12,14),(13,12),(14,15)]'
+polymorphism -c 5-kk    -g '[(0,1),(0,5),(1,2),(2,3),(3,4),(5,11),(6,5),(6,8),(7,6),(8,9),(9,10),(12,11),(12,14),(13,12),(14,15)]'
 ```
 
 ### Trees that might be P-hard (Section 7.2.2)
 
 ```
-cd data/18
-tripolys polymorphism -i core_trees.edges -o core_trees_5-kk_deny.csv -c 5-kk -f deny
+polymorphism -c 5-kk -i data/18/core_trees.edges -o data/18/core_trees_5-kk_deny.csv -f deny
 ```
 
-```
-tripolys polymorphism -i core_trees_5-kk_deny.csv -o core_trees_kk-1000.csv -c kk-1000
-tripolys polymorphism -i core_trees_5-kk_deny.csv -o core_trees_homck-1000.csv -c homck-1000
-```
-
-Other usage examples
------------------
-Use `--help`
-```
-tripolys polymorphism -g 1011000,1001111,010111 -c kmm -I
-```
-```
-tripolys polymorphism -g k3 -c 3-wnu -I
-```
-```
-tripolys homomorphism --from p5 --to c2
-```
+---
 
 Contact
 -----------------
-You can report issues and ask questions in the repository's issues page. 
+You can report issues and ask questions in the repository's issues page.
 
 License
 -----------------

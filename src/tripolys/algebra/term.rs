@@ -88,7 +88,7 @@ impl FromStr for Term<char> {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (symbol, rest) = s.trim().split_once('(').ok_or("Invalid term format")?;
-        let args = rest.trim_end_matches(')').chars().filter(|x| *x != ',');
+        let args = rest.trim_end_matches(')').chars();
         Ok(Term::new(symbol, args))
     }
 }

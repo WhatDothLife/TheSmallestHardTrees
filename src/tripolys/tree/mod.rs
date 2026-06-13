@@ -3,7 +3,7 @@
 mod generate;
 mod tree;
 
-pub use generate::*;
+pub use generate::{Config, Stats, TreeGenerator};
 pub use tree::Tree;
 
 use crate::{csp::Problem, graph::traits::Digraph};
@@ -29,7 +29,7 @@ use crate::{csp::Problem, graph::traits::Digraph};
 /// A `bool` value indicating whether the input `tree` is a core tree.
 pub fn is_core_tree<T>(tree: &T) -> bool
 where
-    T: Digraph,
+    T: Digraph<Vertex = usize>,
 {
     let mut problem = Problem::new(tree, tree);
     problem.make_arc_consistent();
@@ -62,10 +62,10 @@ where
 /// with the specified `root` vertex.
 pub fn is_rooted_core_tree<T>(tree: &T, root: T::Vertex) -> bool
 where
-    T: Digraph,
+    T: Digraph<Vertex = usize>,
 {
     let mut problem = Problem::new(tree, tree);
-    problem.set_value(root.clone(), root);
+    problem.precolor(root.clone(), root);
     problem.make_arc_consistent();
 
     problem.all_singleton()

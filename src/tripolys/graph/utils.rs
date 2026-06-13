@@ -1,4 +1,4 @@
-use crate::graph::traits::{Build, Edges};
+use crate::graph::traits::{Build, Digraph};
 use itertools::Itertools;
 use std::fmt::Debug;
 use std::str::FromStr;
@@ -42,7 +42,7 @@ where
 pub fn edge_list<G>(g: G) -> String
 where
     G::Vertex: Debug,
-    G: Edges,
+    G: Digraph,
 {
     let mut s = String::from("[");
     for (i, (u, v)) in g.edges().enumerate() {

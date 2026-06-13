@@ -111,3 +111,4 @@ fn test_nl_hard() {
     let hami = Polymorphisms::hagemann_mitschke(8).exist(&graph);
     assert!(hami);
 }
+

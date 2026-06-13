@@ -1,6 +1,6 @@
 //! Reading and writing of graph formats.
 
-use super::traits::{Digraph, Edges};
+use super::traits::Digraph;
 use itertools::Itertools;
 use std::{fmt, io};
 
@@ -27,7 +27,7 @@ where
 /// Prints the graph in csv format.
 pub fn to_csv<G, W>(g: G, output: &mut W) -> Result<(), io::Error>
 where
-    G: Edges,
+    G: Digraph,
     W: io::Write,
     G::Vertex: fmt::Debug,
 {

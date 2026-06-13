@@ -1,90 +1,96 @@
-use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
+use clap::{Arg, Command};
 use csv::WriterBuilder;
 use tripolys::graph::edge_list;
-use tripolys::tree::*;
+use tripolys::tree::{Config, Stats, Tree, TreeGenerator};
 
+use std::error::Error;
 use std::fs::{create_dir_all, File};
 use std::io::{BufWriter, Write};
 use std::path::PathBuf;
 
-use crate::CmdResult;
+type CmdResult = Result<(), Box<dyn Error>>;
 
-pub fn cli() -> App<'static, 'static> {
-    SubCommand::with_name("generate")
-        .setting(AppSettings::DeriveDisplayOrder)
+fn main() {
+    let args = Command::new("generate")
         .about("Generate orientations of trees")
         .arg(
-            Arg::with_name("core")
-                .short("c")
+            Arg::new("core")
+                .short('c')
                 .long("core")
+                .action(clap::ArgAction::SetTrue)
                 .help("Whether the generated graphs should be cores"),
         )
         .arg(
-            Arg::with_name("triad")
-                .short("t")
+            Arg::new("triad")
+                .short('t')
                 .long("triad")
+                .action(clap::ArgAction::SetTrue)
                 .help("Whether the generated graphs should be triads"),
         )
         .arg(
-            Arg::with_name("no-write")
-                .short("n")
+            Arg::new("no-write")
+                .short('n')
                 .long("no-write")
+                .action(clap::ArgAction::SetTrue)
                 .help("Prevent the program from writing to disk"),
         )
         .arg(
-            Arg::with_name("start")
-                .short("s")
+            Arg::new("start")
+                .short('s')
                 .long("start")
-                .takes_value(true)
                 .value_name("NUM")
+                .required(true)
                 .help("Number of nodes to start at"),
         )
         .arg(
-            Arg::with_name("end")
-                .short("e")
+            Arg::new("end")
+                .short('e')
                 .long("end")
-                .takes_value(true)
                 .value_name("NUM")
+                .required(true)
                 .help("Number of nodes to end at (inclusive)"),
         )
         .arg(
-            Arg::with_name("data_path")
-                .short("d")
+            Arg::new("data_path")
+                .short('d')
                 .long("data_path")
                 .value_name("PATH")
-                .takes_value(true)
                 .default_value("./data")
                 .help("Path of the data directory"),
         )
         .arg(
-            Arg::with_name("output")
-                .short("o")
+            Arg::new("output")
+                .short('o')
                 .long("output")
                 .value_name("FILE")
-                .help("Name of the csv output file")
                 .default_value("./output.csv")
-                .takes_value(true),
+                .help("Name of the csv output file"),
         )
+        .get_matches();
+
+    if let Err(e) = run(&args) {
+        eprintln!("error: {e}");
+        std::process::exit(1);
+    }
 }
 
-pub fn command(args: &ArgMatches) -> CmdResult {
-    let no_write = args.is_present("no-write");
-    let data_path = args.value_of("data_path").unwrap();
-    let data_path = PathBuf::from(data_path);
+fn run(args: &clap::ArgMatches) -> CmdResult {
+    let no_write = args.get_flag("no-write");
+    let data_path = PathBuf::from(args.get_one::<String>("data_path").unwrap());
 
     if !no_write && !data_path.is_dir() {
         return Err(format!("Directory {data_path:?} doesn't exist").into());
     }
 
-    let start = args.value_of("start").unwrap().parse::<usize>()?;
-    let end = args.value_of("end").unwrap().parse::<usize>()?;
-    let core = args.is_present("core");
-    let triad = args.is_present("triad");
+    let start = args.get_one::<String>("start").unwrap().parse::<usize>()?;
+    let end = args.get_one::<String>("end").unwrap().parse::<usize>()?;
+    let core = args.get_flag("core");
+    let triad = args.get_flag("triad");
 
     let config = Config { triad, core };
 
     let mut wtr = args
-        .value_of("output")
+        .get_one::<String>("output")
         .map(|path| {
             let mut path = path.to_owned();
             if !path.ends_with(".csv") {
@@ -94,7 +100,11 @@ pub fn command(args: &ArgMatches) -> CmdResult {
         })
         .transpose()?;
 
-    let mut rooted_trees = vec![];
+    let mut generator = if no_write {
+        TreeGenerator::new(config)
+    } else {
+        TreeGenerator::new(config).with_cache_dir(data_path.clone())
+    };
 
     for n in start..=end {
         println!("> Vertices: {n}");
@@ -102,7 +112,7 @@ pub fn command(args: &ArgMatches) -> CmdResult {
 
         let mut stats = Stats::default();
         stats.vertices = n as u32;
-        let trees = generate_trees(n, &mut rooted_trees, &config, &mut stats);
+        let trees = generator.trees(n, &mut stats);
 
         if let Some(num_ac_calls) = stats.num_ac_calls {
             println!("    - {: <20} {:?}", "#ac calls:", num_ac_calls);

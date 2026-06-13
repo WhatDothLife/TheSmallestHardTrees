@@ -2,94 +2,43 @@
 
 use std::hash::Hash;
 
-/// Defines the type of vertex of a graph.
-pub trait VertexType {
-    /// Type of vertex.
+/// A directed graph.
+pub trait Digraph {
     type Vertex: Hash + Clone + Eq;
-}
 
-/// Access the vertices of a digraph.
-pub trait Vertices: VertexType {
-    /// Iterator over the vertices of the graph.
     type VertexIter<'a>: Iterator<Item = Self::Vertex>
     where
         Self: 'a;
 
-    /// Returns an iterator over the vertices of the graph.
-    fn vertices(&self) -> Self::VertexIter<'_>;
-
-    /// Returns the number of vertices in the graph.
-    fn vertex_count(&self) -> usize;
-}
-
-/// Access the edges of a digraph.
-pub trait Edges: VertexType {
-    /// Iterator over the edges of the graph.
     type EdgeIter<'a>: Iterator<Item = (Self::Vertex, Self::Vertex)>
     where
         Self: 'a;
 
-    /// Returns an iterator over the edges of the graph.
+    fn vertices(&self) -> Self::VertexIter<'_>;
+    fn vertex_count(&self) -> usize;
     fn edges(&self) -> Self::EdgeIter<'_>;
-
-    /// Returns the number of edges in the graph.
     fn edge_count(&self) -> usize;
 }
 
-/// Check if a graph has a specific edge.
-pub trait HasEdge: VertexType {
-    /// Returns true if the graph contains an edge from `u` to `v`.
-    fn has_edge(&self, u: &Self::Vertex, v: &Self::Vertex) -> bool;
-}
-
-/// A directed graph.
-pub trait Digraph: Vertices + Edges {}
-
-impl<G> Digraph for G where G: Vertices + Edges {}
-
-impl<G> VertexType for &G
-where
-    G: VertexType,
-{
+impl<G: Digraph> Digraph for &G {
     type Vertex = G::Vertex;
-}
-
-impl<G> Vertices for &G
-where
-    G: Vertices,
-{
     type VertexIter<'a> = G::VertexIter<'a> where Self: 'a;
-
-    fn vertex_count(&self) -> usize {
-        (*self).vertex_count()
-    }
+    type EdgeIter<'a> = G::EdgeIter<'a> where Self: 'a;
 
     fn vertices(&self) -> Self::VertexIter<'_> {
         (**self).vertices()
     }
-}
 
-impl<G> Edges for &G
-where
-    G: Edges,
-{
-    type EdgeIter<'a> = G::EdgeIter<'a> where Self: 'a;
+    fn vertex_count(&self) -> usize {
+        (*self).vertex_count()
+    }
 
     fn edges(&self) -> Self::EdgeIter<'_> {
         (**self).edges()
     }
 
     fn edge_count(&self) -> usize {
-        (**self).edge_count()
-    }
-}
-
-impl<G> HasEdge for &G
-where
-    G: HasEdge,
-{
-    fn has_edge(&self, u: &Self::Vertex, v: &Self::Vertex) -> bool {
-        (*self).has_edge(u, v)
+        (*self).edge_count()
     }
 }
 

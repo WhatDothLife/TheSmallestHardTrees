@@ -1,16 +1,14 @@
-use super::iteralgebra::IterAlgebra;
 use super::levels;
 use super::term::Term;
 
 use crate::csp::Problem;
-use crate::graph::traits::{Edges, Vertices};
+use crate::graph::traits::Digraph;
 use crate::graph::AdjList;
 
 use indexmap::IndexSet;
 use itertools::{chain, Itertools};
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::hash::Hash;
 use std::iter::zip;
 use std::str::FromStr;
 
@@ -73,7 +71,7 @@ fn parse(s: &str) -> Result<Polymorphisms, ParseError> {
     let mut non_h1 = Vec::new();
     let mut h1: Vec<(Term<char>, Term<char>)> = Vec::new();
 
-    for eq_str in trimmed.split(['\n', ';']).filter(|x| !x.is_empty()) {
+    for eq_str in trimmed.split(['\n', ';', ',']).filter(|x| !x.is_empty()) {
         let mut constant = None;
         let mut terms = Vec::new();
 
@@ -162,52 +160,46 @@ impl Polymorphisms {
     /// ```
     /// use tripolys::algebra::Polymorphisms;
     ///
-    /// let kmm = "p(xyy)=q(yxx)=q(xxy); p(xyx)=q(xyx)";
+    /// let kmm = "p(xyy)=q(yxx)=q(xxy),p(xyx)=q(xyx)";
     /// let polymorphisms = Polymorphisms::parse_identities(kmm).unwrap();
     /// ```
     pub fn parse_identities(identities: &str) -> Result<Self, ParseError> {
         parse(identities)
     }
 
-    condition!(siggers, "s(a,r,e,a) ≈ s(r,a,r,e)");
-    condition!(kmm, "p(x,y,y) ≈ q(y,x,x) ≈ q(x,x,y)", "p(x,y,x) ≈ q(x,y,x)");
-    condition!(majority, "m(x,x,y) ≈ m(x,y,x) ≈ m(y,x,x) ≈ m(x,x,x) ≈ x");
-    condition!(minority, "m(y,y,y) ≈ m(x,x,y) ≈ m(x,y,x) ≈ m(y,x,x) ≈ y");
-    condition!(maltsev, "f(x,x,y) ≈ f(y,x,x) ≈ y");
-    condition!(fs3, "f(x,y,z) ≈ f(z,x,y) ≈ f(y,x,z)");
-    condition!(edge4, "f(y,y,x,x) ≈ f(y,x,y,x) ≈ f(x,x,x,x) ≈ f(x,x,x,y)");
-    condition!(
-        edge5,
-        "f(y,y,x,x,x) ≈ f(y,x,y,x,x) ≈ f(x,x,x,x,x) ≈ f(x,x,x,y,x) ≈ f(x,x,x,x,y)"
-    );
+    condition!(siggers, "s(area) ≈ s(rare)");
+    condition!(kmm, "p(xyy) ≈ q(yxx) ≈ q(xxy)", "p(xyx) ≈ q(xyx)");
+    condition!(majority, "m(xxy) ≈ m(xyx) ≈ m(yxx) ≈ m(xxx) ≈ x");
+    condition!(minority, "m(yyy) ≈ m(xxy) ≈ m(xyx) ≈ m(yxx) ≈ y");
+    condition!(maltsev, "f(xxy) ≈ f(yxx) ≈ y");
+    condition!(fs3, "f(xyz) ≈ f(zxy) ≈ f(yxz)");
+    condition!(edge4, "f(yyxx) ≈ f(yxyx) ≈ f(xxxx) ≈ f(xxxy)");
+    condition!(edge5, "f(yyxxx) ≈ f(yxyxx) ≈ f(xxxxx) ≈ f(xxxyx) ≈ f(xxxxy)");
     condition!(
         symmetric_majority,
-        "t(x,y,z) ≈ t(y,x,z) ≈ t(y,z,x)",
-        "t(x,x,y) ≈ t(x,x,x)"
+        "t(xyz) ≈ t(yxz) ≈ t(yzx)",
+        "t(xxy) ≈ t(xxx)"
     );
-    condition!(g2, "f(a,a,x,y) ≈ f(b,b,x,y) ≈ f(x,a,a,y) ≈ f(y,a,x,a)");
-    condition!(
-        g3,
-        "f(a,a,x,y,z) ≈ f(b,b,x,y,z) ≈ f(x,a,a,y,z) ≈ f(y,a,x,a,z) ≈ f(z,a,x,y,a)"
-    );
-    condition!(gs3, "f(x,x,x,x) ≈ f(x,x,x,y)", "f(1,2,3,x) ≈ f(2,3,1,x)");
+    condition!(g2, "f(aaxy) ≈ f(bbxy) ≈ f(xaay) ≈ f(yaxa)");
+    condition!(g3, "f(aaxyz) ≈ f(bbxyz) ≈ f(xaayz) ≈ f(yaxaz) ≈ f(zaxya)");
+    condition!(gs3, "f(xxxx) ≈ f(xxxy)", "f(123x) ≈ f(231x)");
     condition!(
         wnu3_4,
-        "g(x,x,y) ≈ g(x,y,x) ≈ g(y,x,x)",
-        "f(x,x,x,y) ≈ f(x,x,y,x) ≈ f(x,y,x,x) ≈ f(y,x,x,x)",
-        "g(y,x,x) ≈ f(y,x,x,x)"
+        "g(xxy) ≈ g(xyx) ≈ g(yxx)",
+        "f(xxxy) ≈ f(xxyx) ≈ f(xyxx) ≈ f(yxxx)",
+        "g(yxx) ≈ f(yxxx)"
     );
     condition!(
         hm2maj,
-        "p(y,y,x) ≈ p(x,x,x)",
-        "p(x,y,y) ≈ q(x,x,y)",
-        "q(x,y,y) ≈ q(x,x,x)",
-        "p(x,y,x) ≈ p(x,x,x) ≈ q(x,y,x)"
+        "p(yyx) ≈ p(xxx)",
+        "p(xyy) ≈ q(xxy)",
+        "q(xyy) ≈ q(xxx)",
+        "p(xyx) ≈ p(xxx) ≈ q(xyx)"
     );
     condition!(
         pix2,
-        "p(x,y,y) ≈ p(x,x,x) ≈ p(x,y,x),p(x,x,y) ≈ q(x,y,y)",
-        "q(y,x,y) ≈ q(x,x,y) ≈ q(y,y,y)"
+        "p(xyy) ≈ p(xxx) ≈ p(xyx);p(xxy) ≈ q(xyy)",
+        "q(yxy) ≈ q(xxy) ≈ q(yyy)"
     );
 
     /// f (y,x,x,…,x,x) ≈ f (x,y,x,…,x,x) ≈ … ≈ f (x,x,x,…,x,y)
@@ -347,15 +339,17 @@ impl Polymorphisms {
     /// The size of the indicator digraph grows exponentially with the
     /// arity of the function symbols in the condition and linearly with
     /// number of function symbols.
-    pub fn indicator_graph<V: Copy + Eq + Hash>(&self, h: &AdjList<V>) -> AdjList<Term<V>> {
+    pub fn indicator_graph(&self, h: &AdjList<usize>) -> AdjList<Term<usize>> {
         // Construct for each function symbol the categorical power of H of
         // the corresponding arity, and take their disjoint union.
         let mut indicator_edges: Vec<_> = self
             .ops
             .iter()
             .flat_map(|(symbol, arity)| {
-                h.edges()
-                    .kproduct_tuples(*arity)
+                (0..*arity)
+                    .map(|_| h.edges())
+                    .multi_cartesian_product()
+                    .map(|perm| perm.into_iter().unzip::<_, _, Vec<_>, Vec<_>>())
                     .map(move |(u, v)| (Term::new(symbol, u), Term::new(symbol, v)))
             })
             .collect();
@@ -387,7 +381,7 @@ impl Polymorphisms {
                             .unique()
                             .collect();
 
-                        for values in h.vertices().kproduct(unbound_vars.len()) {
+                        for values in (0..unbound_vars.len()).map(|_| h.vertices()).multi_cartesian_product() {
                             let mut substitution = var_binding.clone();
                             substitution.extend(zip(unbound_vars.clone(), values));
                             let rhs_mapped = rhs.map(|x| *substitution.get(&x).unwrap());
@@ -420,7 +414,7 @@ impl Polymorphisms {
     ///
     /// assert!(!problem.solution_exists());
     /// ```
-    pub fn problem<V: Copy + Eq + Hash>(&self, h: &AdjList<V>) -> Problem<Term<V>, V> {
+    pub fn problem(&self, h: &AdjList<usize>) -> Problem<Term<usize>> {
         let indicator = self.indicator_graph(h);
         let mut problem = Problem::new(&indicator, h);
         let mut non_height1 = self.non_height1.clone();
@@ -437,7 +431,7 @@ impl Polymorphisms {
         for v in indicator.vertices() {
             for (term, constant) in &non_height1 {
                 if let Some(bindings) = term.match_with(&v) {
-                    problem.set_value(v.clone(), *bindings.get(constant).unwrap());
+                    problem.precolor(v.clone(), *bindings.get(constant).unwrap());
                 }
             }
         }
@@ -466,17 +460,10 @@ impl Polymorphisms {
     ///
     /// assert!(!exists);
     /// ```
-    pub fn exist<V: Copy + Eq + Hash>(&self, h: &AdjList<V>) -> bool {
+    pub fn exist(&self, h: &AdjList<usize>) -> bool {
         self.problem(h).solution_exists()
     }
 
-    pub fn find<V: Copy + Eq + Hash>(&self, h: &AdjList<V>) -> Option<HashMap<Term<V>, V>> {
-        self.problem(h).solve_first()
-    }
-
-    pub fn find_all<V: Copy + Eq + Hash>(&self, h: &AdjList<V>) -> Vec<HashMap<Term<V>, V>> {
-        self.problem(h).solve_all()
-    }
 }
 
 fn hagemann_mitschke_chain(n: u32) -> String {

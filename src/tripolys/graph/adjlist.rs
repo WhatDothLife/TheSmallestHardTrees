@@ -111,12 +111,10 @@ impl<V: Hash + Clone + Eq> AdjList<V> {
     }
 }
 
-impl<V: Hash + Clone + Eq> VertexType for AdjList<V> {
+impl<V: Hash + Clone + Eq> Digraph for AdjList<V> {
     type Vertex = V;
-}
-
-impl<V: Hash + Clone + Eq> Vertices for AdjList<V> {
     type VertexIter<'a> = VertexIter<'a, V> where V: 'a;
+    type EdgeIter<'a> = EdgeIter<'a, V> where V: 'a;
 
     fn vertex_count(&self) -> usize {
         self.lists.len()
@@ -125,10 +123,6 @@ impl<V: Hash + Clone + Eq> Vertices for AdjList<V> {
     fn vertices(&self) -> Self::VertexIter<'_> {
         VertexIter(self.lists.keys().cloned())
     }
-}
-
-impl<V: Hash + Clone + Eq> Edges for AdjList<V> {
-    type EdgeIter<'a> = EdgeIter<'a, V> where V: 'a;
 
     fn edges(&self) -> Self::EdgeIter<'_> {
         EdgeIter {
@@ -146,15 +140,6 @@ impl<V: Hash + Clone + Eq> Edges for AdjList<V> {
     }
 }
 
-impl<V: Hash + Clone + Eq> HasEdge for AdjList<V> {
-    fn has_edge(&self, u: &Self::Vertex, v: &Self::Vertex) -> bool {
-        if let Some(neighbors) = self.lists.get(u) {
-            neighbors.outgoing.contains(v)
-        } else {
-            false
-        }
-    }
-}
 
 impl<V: Hash + Clone + Eq> FromIterator<(V, V)> for AdjList<V> {
     fn from_iter<T: IntoIterator<Item = (V, V)>>(iter: T) -> Self {

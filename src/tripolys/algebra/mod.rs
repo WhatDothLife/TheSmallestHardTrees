@@ -1,6 +1,5 @@
 //! Concepts that are related to universal algebra.
 
-mod iteralgebra;
 mod polymorphism;
 mod term;
 mod utils;

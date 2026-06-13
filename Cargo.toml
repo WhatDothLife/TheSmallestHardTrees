@@ -8,11 +8,11 @@ edition = "2021"
 
 [dependencies]
 bitvec = "1.0.1"
-clap = "2.33.0"
+clap = { version = "4", features = ["cargo"] }
 colored = "2.0.0"
 csv = "1.1.6"
 indexmap = "1.9.2"
-itertools = "0.10.1"
+itertools = "0.14.0"
 rayon = "1.5"
 serde = { version = "1.0", features = ["derive", "rc"]}
 
@@ -21,10 +21,12 @@ name = "tripolys"
 path = "src/tripolys/lib.rs"
 
 [[bin]]
-name = "tripolys"
-path = "src/bin/tripolys/main.rs"
-test = false
-doc = false
+name = "generate"
+path = "src/bin/generate.rs"
+
+[[bin]]
+name = "polymorphism"
+path = "src/bin/polymorphism.rs"
 
 [profile.release]
 debug = true

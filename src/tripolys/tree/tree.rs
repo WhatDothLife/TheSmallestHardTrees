@@ -1,21 +1,14 @@
+use std::str::FromStr;
 use std::sync::Arc;
 use std::{cmp::max, ops::Range};
 
-use crate::graph::traits::{Edges, VertexType, Vertices};
+use crate::graph::traits::Digraph;
 
 /// An orientation of a tree defined as a recursive data structure.
 ///
-/// Note that the `Tree` data structure is specifically designed for use with
-/// the orientation generation algorithm and may not be suitable for other use
-/// cases.
-///
-/// It uses shared pointers to point to its children. Each shared pointer
-/// contains a reference to the child `Tree` object and a boolean flag that
-/// determines the direction of the connecting edge.
-///
-/// Also it implements traits such as `Vertices` and `Edges`, and provides
-/// methods such as `max_arity` that return information specific to the graph
-/// interpretation of the data structure.
+/// Uses shared pointers to its children, each paired with a direction boolean
+/// for the connecting edge. Designed specifically for the orientation
+/// generation algorithm.
 #[derive(Clone, Debug, PartialOrd, PartialEq)]
 pub struct Tree {
     /// The total number of vertices in the tree.
@@ -87,29 +80,6 @@ impl Tree {
         self.children.push((child, dir));
     }
 
-    /// Returns an iterator over the children of the tree.
-    ///
-    /// The `iter` method returns an iterator that yields tuples of type `(Arc<Tree>, bool)`
-    /// representing the children of the tree and their directions.
-    pub fn iter(&self) -> impl Iterator<Item = (Arc<Tree>, bool)> + '_ {
-        self.children.iter().cloned()
-    }
-}
-
-impl VertexType for Tree {
-    type Vertex = usize;
-}
-
-impl Vertices for Tree {
-    type VertexIter<'a> = Range<usize>;
-
-    fn vertices(&self) -> Self::VertexIter<'_> {
-        0..self.vertex_count()
-    }
-
-    fn vertex_count(&self) -> usize {
-        self.num_vertices
-    }
 }
 
 #[derive(Default)]
@@ -124,7 +94,7 @@ impl Iterator for EdgeIt<'_> {
     type Item = (usize, usize);
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.children.get(0) {
+        match self.children.first() {
             None => match self.parent.take() {
                 Some(mut parent) => {
                     // continue with the parent node
@@ -156,8 +126,18 @@ impl Iterator for EdgeIt<'_> {
     }
 }
 
-impl Edges for Tree {
+impl Digraph for Tree {
+    type Vertex = usize;
+    type VertexIter<'a> = Range<usize>;
     type EdgeIter<'a> = EdgeIt<'a>;
+
+    fn vertices(&self) -> Self::VertexIter<'_> {
+        0..self.vertex_count()
+    }
+
+    fn vertex_count(&self) -> usize {
+        self.num_vertices
+    }
 
     fn edges(&self) -> Self::EdgeIter<'_> {
         EdgeIt {
@@ -183,6 +163,53 @@ impl FromIterator<(Arc<Tree>, bool)> for Tree {
     }
 }
 
+impl FromStr for Tree {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (tree, rest) = parse_tree(s)?;
+        if !rest.is_empty() {
+            return Err(format!("unexpected characters: {rest}"));
+        }
+        Ok(tree)
+    }
+}
+
+fn parse_tree(s: &str) -> Result<(Tree, &str), String> {
+    if s.starts_with('[') {
+        let s = &s[1..];
+        let (children, s) = parse_children(s)?;
+        if !s.starts_with(']') {
+            return Err("expected ']'".to_string());
+        }
+        Ok((children.into_iter().collect(), &s[1..]))
+    } else {
+        Ok((Tree::leaf(), s))
+    }
+}
+
+fn parse_children(s: &str) -> Result<(Vec<(Arc<Tree>, bool)>, &str), String> {
+    let mut children = Vec::new();
+    let mut s = s;
+
+    while !s.starts_with(']') {
+        if s.is_empty() {
+            return Err("unexpected end of input, expected ']'".to_string());
+        }
+        let dir = match s.chars().next().unwrap() {
+            '0' => false,
+            '1' => true,
+            c => return Err(format!("expected '0' or '1', got '{c}'")),
+        };
+        s = &s[1..];
+        let (child, rest) = parse_tree(s)?;
+        s = rest;
+        children.push((Arc::new(child), dir));
+    }
+
+    Ok((children, s))
+}
+
 impl std::fmt::Display for Tree {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut s = String::new();
@@ -202,6 +229,25 @@ impl std::fmt::Display for Tree {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_roundtrip() {
+        let t_left = Tree::from_iter([
+            (Arc::new(Tree::leaf()), true),
+            (Arc::new(Tree::leaf()), true),
+            (Arc::new(Tree::leaf()), false),
+        ]);
+        let t_right = Tree::from_iter([
+            (Arc::new(Tree::leaf()), false),
+            (Arc::new(Tree::leaf()), true),
+            (Arc::new(Tree::leaf()), false),
+        ]);
+        let t = Tree::from_iter([(Arc::new(t_left), true), (Arc::new(t_right), false)]);
+
+        let s = t.to_string();
+        let parsed: Tree = s.parse().unwrap();
+        assert_eq!(t, parsed);
+    }
 
     #[test]
     fn test_edges() {
